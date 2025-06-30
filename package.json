@@ -1,0 +1,41 @@
+{
+  "name": "coremcp-monorepo",
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.12.4",
+  "engines": {
+    "node": ">=22.11"
+  },
+  "description": "Monorepo of CoreMCP packages",
+  "keywords": [
+    "mcp"
+  ],
+  "homepage": "https://github.com/alvis/coremcp-monorepo#readme",
+  "bugs": {
+    "url": "https://github.com/alvis/coremcp-monorepo/issues"
+  },
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "lint-staged": {
+    "*": "true"
+  },
+  "scripts": {
+    "prepare": "husky || true",
+    "install": "presetter bootstrap --projects . --projects */*/",
+    "build": "pnpm --recursive run build",
+    "coverage": "run --coverage",
+    "lint": "run lint",
+    "test": "run test --",
+    "watch": "run watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvis/coremcp-monorepo.git"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "presetter": "^8.0.0",
+    "presetter-preset-monorepo": "^8.0.0",
+    "typescript": "^5.8.0"
+  }
+}
