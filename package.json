@@ -1,37 +1,41 @@
 {
-  "name": "coremcp",
+  "name": "coremcp-monorepo",
   "version": "0.0.0",
-  "description": "Core MCP - Complete TypeScript implementation of the Model Context Protocol (Coming Soon)",
+  "packageManager": "pnpm@10.12.4",
+  "engines": {
+    "node": ">=22.11"
+  },
+  "description": "Monorepo of CoreMCP packages",
   "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "ai",
-    "typescript",
-    "protocol",
-    "tools",
-    "resources",
-    "prompts",
-    "clients",
-    "servers"
+    "mcp"
   ],
   "homepage": "https://github.com/alvis/coremcp-monorepo#readme",
   "bugs": {
     "url": "https://github.com/alvis/coremcp-monorepo/issues"
   },
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "lint-staged": {
+    "*": "true"
+  },
+  "scripts": {
+    "prepare": "husky || true",
+    "install": "presetter bootstrap --projects . --projects */*/",
+    "build": "pnpm --recursive run build",
+    "coverage": "run --coverage",
+    "lint": "run lint",
+    "test": "run test --",
+    "watch": "run watch"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alvis/coremcp-monorepo.git"
   },
-  "license": "MIT",
-  "author": "alvis",
-  "main": "index.js",
-  "scripts": {
-    "preinstall": "echo \"This is a placeholder package for CoreMCP. Please visit https://github.com/alvis/coremcp-monorepo for the full implementation.\""
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "presetter": "^8.0.0",
+    "presetter-preset-monorepo": "^8.0.0",
+    "typescript": "^5.8.0"
   }
 }
