@@ -1,0 +1,37 @@
+{
+  "name": "coremcp",
+  "version": "0.0.0",
+  "description": "Core MCP - Complete TypeScript implementation of the Model Context Protocol (Coming Soon)",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "typescript",
+    "protocol",
+    "tools",
+    "resources",
+    "prompts",
+    "clients",
+    "servers"
+  ],
+  "homepage": "https://github.com/alvis/coremcp-monorepo#readme",
+  "bugs": {
+    "url": "https://github.com/alvis/coremcp-monorepo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvis/coremcp-monorepo.git"
+  },
+  "license": "MIT",
+  "author": "alvis",
+  "main": "index.js",
+  "scripts": {
+    "preinstall": "echo \"This is a placeholder package for CoreMCP. Please visit https://github.com/alvis/coremcp-monorepo for the full implementation.\""
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
