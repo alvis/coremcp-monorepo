@@ -1,0 +1,83 @@
+{
+  "name": "@coremcp/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "mcp server",
+  "keywords": [
+    "mcp"
+  ],
+  "homepage": "https://github.com/alvis/coremcp-monorepo#readme",
+  "bugs": {
+    "url": "https://github.com/alvis/coremcp-monorepo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvis/coremcp-monorepo.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts",
+    "#handlers": "./src/handlers/index.ts",
+    "#types": "./src/types/index.ts",
+    "#utilities": "./src/utilities/index.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./transport": "./src/transport.ts"
+  },
+  "scripts": {
+    "build": "run build",
+    "coverage": "run coverage --",
+    "lint": "run lint --",
+    "prepare": "run prepare",
+    "test": "run test --",
+    "typecheck": "run typecheck",
+    "watch": "run watch"
+  },
+  "lint-staged": {
+    "*": "true"
+  },
+  "browserslist": [
+    "node > 22"
+  ],
+  "dependencies": {
+    "@coremcp/core": "workspace:*",
+    "@coremcp/protocol": "workspace:*",
+    "ajv": "catalog:utility"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">20"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./lib/index.d.ts",
+        "default": "./lib/index.js"
+      },
+      "./transport": {
+        "types": "./lib/transport.d.ts",
+        "default": "./lib/transport.js"
+      }
+    },
+    "imports": {
+      "#*": {
+        "type": "./lib/*.d.ts",
+        "default": "./lib/*.js"
+      },
+      "#handlers": {
+        "type": "./lib/handlers/index.d.ts",
+        "default": "./lib/handlers/index.js"
+      },
+      "#types": {
+        "type": "./lib/types/index.d.ts",
+        "default": "./lib/types/index.js"
+      },
+      "#utilities": {
+        "type": "./lib/utilities/index.d.ts",
+        "default": "./lib/utilities/index.js"
+      }
+    }
+  }
+}
