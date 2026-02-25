@@ -1,0 +1,61 @@
+{
+  "name": "@coremcp/session-local",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JSON file-based session storage for MCP servers",
+  "keywords": [
+    "mcp"
+  ],
+  "homepage": "https://github.com/alvis/coremcp-monorepo#readme",
+  "bugs": {
+    "url": "https://github.com/alvis/coremcp-monorepo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvis/coremcp-monorepo.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "run build",
+    "coverage": "run coverage --",
+    "lint": "run lint --",
+    "prepare": "run prepare",
+    "test": "run test --",
+    "typecheck": "run typecheck",
+    "watch": "run watch"
+  },
+  "lint-staged": {
+    "*": "true"
+  },
+  "browserslist": [
+    "node > 22"
+  ],
+  "dependencies": {
+    "@coremcp/core": "workspace:*",
+    "fast-glob": "^3.3.0"
+  },
+  "engines": {
+    "node": ">20"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./lib/index.d.ts",
+        "default": "./lib/index.js"
+      }
+    },
+    "imports": {
+      "#*": {
+        "type": "./lib/*.d.ts",
+        "default": "./lib/*.js"
+      }
+    }
+  }
+}
