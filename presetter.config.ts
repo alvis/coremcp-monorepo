@@ -6,4 +6,7 @@ import { name } from './package.json';
 
 export default preset(name, {
   extends: [monorepo],
+  variables: {
+    target: 'ES2024'
+  }
 });
