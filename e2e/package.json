@@ -1,0 +1,56 @@
+{
+  "name": "@coremcp/e2e",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "description": "End-to-end tests for coremcp packages",
+  "keywords": [
+    "mcp",
+    "e2e",
+    "testing"
+  ],
+  "homepage": "https://github.com/alvis/coremcp-monorepo#readme",
+  "bugs": {
+    "url": "https://github.com/alvis/coremcp-monorepo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvis/coremcp-monorepo.git"
+  },
+  "license": "MIT",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "run build",
+    "coverage": "run coverage --",
+    "lint": "run lint --",
+    "prepare": "run prepare",
+    "test": "vitest run --config vitest.config.e2e.ts",
+    "test:watch": "vitest --config vitest.config.e2e.ts",
+    "watch": "run watch"
+  },
+  "lint-staged": {
+    "*": "true"
+  },
+  "browserslist": [
+    "node > 22"
+  ],
+  "devDependencies": {
+    "@modelcontextprotocol/server-everything": "2025.11.25",
+    "@coremcp/client": "workspace:*",
+    "@coremcp/client-http": "workspace:*",
+    "@coremcp/client-stdio": "workspace:*",
+    "@coremcp/core": "workspace:*",
+    "@coremcp/protocol": "workspace:*",
+    "@coremcp/server": "workspace:*",
+    "@coremcp/server-fastify": "workspace:*",
+    "@coremcp/server-stdio": "workspace:*"
+  },
+  "engines": {
+    "node": ">20"
+  }
+}
