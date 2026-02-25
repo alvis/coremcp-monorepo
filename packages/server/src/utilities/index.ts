@@ -32,6 +32,8 @@ export { resumeSession } from './session-resumption';
 
 export { replayUndeliveredEvents } from './message-resumption';
 
+export { streamSessionNotifications } from './notification-stream';
+
 export type { ValidateSessionOptions } from './session-authorization';
 export type { SubscriptionMap } from './subscription-manager';
 export type { SessionIdGenerator } from './session-id-generator';
@@ -40,3 +42,4 @@ export type { CreateSessionDataOptions } from './session-initialization';
 export type { SessionCleanupContext } from './session-cleanup';
 export type { ResumeSessionContext } from './session-resumption';
 export type { ReplayUndeliveredEventsOptions } from './message-resumption';
+export type { StreamSessionNotificationsOptions } from './notification-stream';
