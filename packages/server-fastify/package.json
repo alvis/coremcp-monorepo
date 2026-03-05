@@ -42,7 +42,7 @@
     "@coremcp/protocol": "workspace:*",
     "@coremcp/server": "workspace:*",
     "@fastify/formbody": "^8.0.0",
-    "fastify": "^5.4.0",
+    "fastify": "^5.8.1",
     "jose": "^6.1.2"
   },
   "devDependencies": {
