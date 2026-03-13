@@ -21,8 +21,8 @@ catalogs:
       specifier: ^4.0.0
       version: 4.0.18
     undici:
-      specifier: ^7.0.0
-      version: 7.22.0
+      specifier: ^7.24.0
+      version: 7.24.1
     vitest:
       specifier: ^4.0.0
       version: 4.0.18
@@ -113,7 +113,7 @@ importers:
     devDependencies:
       undici:
         specifier: catalog:test
-        version: 7.22.0
+        version: 7.24.1
 
   packages/client-stdio:
     dependencies:
@@ -150,12 +150,6 @@ importers:
       ajv:
         specifier: catalog:utility
         version: 8.18.0
-
-  packages/server-auth:
-    dependencies:
-      '@coremcp/core':
-        specifier: workspace:*
-        version: link:../core
 
   packages/server-fastify:
     dependencies:
@@ -1985,6 +1979,7 @@ packages:
   git-raw-commits@2.0.11:
     resolution: {integrity: sha512-VnctFhw+xfj8Va1xtfEqCUD2XDrbAPSJx+hSrE5K7fGdjZruW7XV+QOrN7LF/RJyvspRiD2I0asWsxFp0ya26A==}
     engines: {node: '>=10'}
+    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
     hasBin: true
 
   git-remote-origin-url@2.0.0:
@@ -1994,6 +1989,7 @@ packages:
   git-semver-tags@4.1.1:
     resolution: {integrity: sha512-OWyMt5zBe7xFs8vglMmhM9lRQzCWL3WjHtxNNfJTMngGym7pC1kh8sP6jevfydJ6LP3ZvGxfb6ABYgPUM0mtsA==}
     engines: {node: '>=10'}
+    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
     hasBin: true
 
   gitconfiglocal@1.0.0:
@@ -3706,6 +3702,10 @@ packages:
 
   undici@7.22.0:
     resolution: {integrity: sha512-RqslV2Us5BrllB+JeiZnK4peryVTndy9Dnqq62S3yYRRTj0tFQCwEniUy2167skdGOy3vqRzEvl1Dm4sV2ReDg==}
+    engines: {node: '>=20.18.1'}
+
+  undici@7.24.1:
+    resolution: {integrity: sha512-5xoBibbmnjlcR3jdqtY2Lnx7WbrD/tHlT01TmvqZUFVc9Q1w4+j5hbnapTqbcXITMH1ovjq/W7BkqBilHiVAaA==}
     engines: {node: '>=20.18.1'}
 
   unicorn-magic@0.3.0:
@@ -7748,6 +7748,8 @@ snapshots:
   undici-types@7.16.0: {}
 
   undici@7.22.0: {}
+
+  undici@7.24.1: {}
 
   unicorn-magic@0.3.0: {}
 
