@@ -69,13 +69,7 @@ const baseResource: Resource = {
 
 // HELPERS //
 
-const withMockContext = (): SessionContext => ({
-  channel: {
-    id: 'test-channel',
-    side: 'server',
-    write: vi.fn(),
-  },
-});
+const withMockContext = (): SessionContext => ({});
 
 const withSessionData = (
   overrides: Partial<SessionData> = {},
@@ -399,7 +393,7 @@ describe('cl:Session', () => {
 
       const result = session.toJSON();
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         id: 'test-session-123',
         userId: 'user-123',
         protocolVersion: '2025-06-18',
@@ -414,8 +408,16 @@ describe('cl:Session', () => {
         resources: [baseResource],
         resourceTemplates: [],
         subscriptions: [],
-        events: [],
-      });
+      }));
+
+      // verify list_changed notification events were recorded
+      expect(result.events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: 'server-message', message: expect.objectContaining({ method: 'notifications/tools/list_changed' }) }),
+          expect.objectContaining({ type: 'server-message', message: expect.objectContaining({ method: 'notifications/prompts/list_changed' }) }),
+          expect.objectContaining({ type: 'server-message', message: expect.objectContaining({ method: 'notifications/resources/list_changed' }) }),
+        ]),
+      );
 
       result.tools.push({ ...baseTool, name: 'new-tool' });
 
@@ -579,107 +581,113 @@ describe('cl:Session', () => {
 
   describe('mt:sendLog', () => {
     it('should send notification when no log level threshold is set', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('info', 'test message');
 
-      expect(context.channel.write).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'notifications/message',
-          params: { level: 'info', data: 'test message' },
-        }),
-      );
+      expect(notifySpy).toHaveBeenCalledWith({
+        method: 'notifications/message',
+        params: { level: 'info', data: 'test message' },
+      });
+
+      notifySpy.mockRestore();
     });
 
     it('should send notification when message level meets threshold', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
       session.logLevel = 'warning';
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('error', 'error message');
 
-      expect(context.channel.write).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'notifications/message',
-          params: { level: 'error', data: 'error message' },
-        }),
-      );
+      expect(notifySpy).toHaveBeenCalledWith({
+        method: 'notifications/message',
+        params: { level: 'error', data: 'error message' },
+      });
+
+      notifySpy.mockRestore();
     });
 
     it('should send notification when message level equals threshold', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
       session.logLevel = 'warning';
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('warning', 'warning message');
 
-      expect(context.channel.write).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'notifications/message',
-          params: { level: 'warning', data: 'warning message' },
-        }),
-      );
+      expect(notifySpy).toHaveBeenCalledWith({
+        method: 'notifications/message',
+        params: { level: 'warning', data: 'warning message' },
+      });
+
+      notifySpy.mockRestore();
     });
 
     it('should filter notification when message level is below threshold', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
       session.logLevel = 'warning';
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('info', 'info should be filtered');
 
-      expect(context.channel.write).not.toHaveBeenCalled();
+      expect(notifySpy).not.toHaveBeenCalled();
+
+      notifySpy.mockRestore();
     });
 
     it('should include logger field when provided', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('info', 'test message', 'test-logger');
 
-      expect(context.channel.write).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'notifications/message',
-          params: { level: 'info', data: 'test message', logger: 'test-logger' },
-        }),
-      );
+      expect(notifySpy).toHaveBeenCalledWith({
+        method: 'notifications/message',
+        params: { level: 'info', data: 'test message', logger: 'test-logger' },
+      });
+
+      notifySpy.mockRestore();
     });
 
     it('should omit logger field when not provided', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('error', 'error data');
 
-      const callArg = vi.mocked(context.channel.write).mock.calls[0]?.[0] as Record<string, unknown>;
+      const callArg = notifySpy.mock.calls[0]?.[0] as Record<string, unknown>;
       const params = callArg?.params as Record<string, unknown>;
       expect(params).not.toHaveProperty('logger');
+
+      notifySpy.mockRestore();
     });
 
     it('should filter debug messages when threshold is emergency', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
       session.logLevel = 'emergency';
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('debug', 'debug message');
 
-      expect(context.channel.write).not.toHaveBeenCalled();
+      expect(notifySpy).not.toHaveBeenCalled();
+
+      notifySpy.mockRestore();
     });
 
     it('should pass emergency messages regardless of threshold', async () => {
-      const context = withMockContext();
-      const session = new Session(withSessionData(), context);
+      const session = createSession();
       session.logLevel = 'emergency';
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await session.sendLog('emergency', 'critical failure');
 
-      expect(context.channel.write).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'notifications/message',
-          params: { level: 'emergency', data: 'critical failure' },
-        }),
-      );
+      expect(notifySpy).toHaveBeenCalledWith({
+        method: 'notifications/message',
+        params: { level: 'emergency', data: 'critical failure' },
+      });
+
+      notifySpy.mockRestore();
     });
   });
 

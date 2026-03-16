@@ -27,13 +27,7 @@ const sessionData: SessionData = {
   events: [],
 };
 
-const sessionContext: SessionContext = {
-  channel: {
-    id: 'default-channel',
-    side: 'server',
-    write: async () => {},
-  },
-};
+const sessionContext: SessionContext = {};
 
 const notificationMessage: JsonRpcMessage = {
   jsonrpc: JSONRPC_VERSION,

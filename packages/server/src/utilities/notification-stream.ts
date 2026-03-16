@@ -37,14 +37,25 @@ export function streamSessionNotifications(
 ): () => void {
   const { session, context, sessionStorage } = options;
 
+  // build watermark from existing events so that notifications scoped to
+  // channels that existed before this SSE stream opened are treated as stale
+  const watermark = session.events.length;
+  const channelFirstSeen = new Map<string, number>();
+  for (let i = 0; i < watermark; i++) {
+    const ch = session.events[i].channelId;
+    if (ch && !channelFirstSeen.has(ch)) {
+      channelFirstSeen.set(ch, i);
+    }
+  }
+
   const unsubscribeSession = session.addListener(
     (event: SessionEvent): void => {
-      // skip events that originated from this channel because
-      // session.reply() already wrote them via session.channel.write()
+      // skip response events and notifications scoped to channels that
+      // existed before this stream opened (stale notification prevention)
       if (
         event.type === 'server-message' &&
         !event.responseToRequestId &&
-        event.channelId !== context.channelId
+        !(event.channelId && channelFirstSeen.has(event.channelId))
       ) {
         void context.write(event.message);
       }

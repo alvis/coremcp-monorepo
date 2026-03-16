@@ -3,11 +3,16 @@ import { Ajv } from 'ajv';
 import type {
   JsonSchema,
   ToolAnnotations,
+  ToolExecution,
   Tool,
 } from '@coremcp/protocol';
 
 /** supported MCP specification versions */
-export type SupportedVersion = '2024-11-05' | '2025-03-26' | '2025-06-18';
+export type SupportedVersion =
+  | '2024-11-05'
+  | '2025-03-26'
+  | '2025-06-18'
+  | '2025-11-25';
 
 /** executable tool implementation with version-specific spec generation */
 export class ServerTool<Input, Output> implements Tool {
@@ -16,11 +21,15 @@ export class ServerTool<Input, Output> implements Tool {
   /** human-readable display name for UI contexts */
   #title?: string;
   /** human-readable explanation of what this tool does */
-  #description: string;
+  #description?: string;
+  /** optionally-sized icons for UI display */
+  #icons?: Tool['icons'];
   /** JSON Schema defining the structure of arguments this tool accepts */
   #inputSchema: JsonSchema;
   /** JSON Schema defining the structure of return values */
   #outputSchema?: JsonSchema;
+  /** execution-related metadata */
+  #execution?: ToolExecution;
   /** optional metadata or annotations */
   #annotations?: ToolAnnotations;
   /** function that executes the tool's logic */
@@ -32,14 +41,14 @@ export class ServerTool<Input, Output> implements Tool {
    * creates a new tool instance
    * @param params tool specification and execution function
    */
-  constructor(
-    params: Tool & { execute: (input: Input) => Promise<Output> },
-  ) {
+  constructor(params: Tool & { execute: (input: Input) => Promise<Output> }) {
     this.#name = params.name;
     this.#title = params.title;
     this.#description = params.description;
+    this.#icons = params.icons;
     this.#inputSchema = params.inputSchema;
     this.#outputSchema = params.outputSchema;
+    this.#execution = params.execution;
     this.#annotations = params.annotations;
     this.#execute = params.execute;
 
@@ -73,8 +82,13 @@ export class ServerTool<Input, Output> implements Tool {
   }
 
   /** human-readable explanation of what this tool does */
-  public get description(): string {
+  public get description(): string | undefined {
     return this.#description;
+  }
+
+  /** optionally-sized icons for UI contexts */
+  public get icons(): Tool['icons'] | undefined {
+    return this.#icons;
   }
 
   /** JSON Schema defining the structure of arguments this tool accepts */
@@ -85,6 +99,11 @@ export class ServerTool<Input, Output> implements Tool {
   /** JSON Schema defining the structure of return values */
   public get outputSchema(): JsonSchema | undefined {
     return this.#outputSchema;
+  }
+
+  /** execution-related metadata */
+  public get execution(): ToolExecution | undefined {
+    return this.#execution;
   }
 
   /** optional metadata or annotations */
@@ -113,6 +132,7 @@ export class ServerTool<Input, Output> implements Tool {
     const base: Tool = {
       name: this.name,
       description: this.description,
+      icons: this.icons,
       inputSchema: this.inputSchema,
     };
 
@@ -127,6 +147,7 @@ export class ServerTool<Input, Output> implements Tool {
           annotations: this.annotations,
         };
       case '2025-06-18':
+      case '2025-11-25':
       default:
         // return latest spec for unknown versions
         return {
@@ -135,6 +156,7 @@ export class ServerTool<Input, Output> implements Tool {
           annotations: this.annotations,
           // title and outputSchema added in 2025-06-18,
           title: this.title,
+          execution: this.execution,
           outputSchema: this.outputSchema,
         };
     }

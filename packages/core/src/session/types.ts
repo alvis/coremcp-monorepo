@@ -141,7 +141,6 @@ export interface SessionData {
 
 /** context information and configuration for a session */
 export interface SessionContext {
-  channel: SessionChannelContext;
   hooks?: SessionHook;
   store?: SessionStore;
 }

@@ -30,6 +30,15 @@ export function createCapabilities(
       ? { listChanged: true, subscribe: true }
       : undefined,
     tools: hasToolsCapability(params) ? { listChanged: true } : undefined,
+    tasks: hasTasksCapability(params)
+      ? {
+          cancel: params.handlers?.cancelTask ? {} : undefined,
+          list: params.handlers?.listTasks ? {} : undefined,
+          requests: params.handlers?.callTool
+            ? { tools: { call: {} } }
+            : undefined,
+        }
+      : undefined,
   });
 }
 
@@ -66,5 +75,19 @@ export function hasToolsCapability(params: CapabilityParams): boolean {
   return !!(
     params.tools ??
     (params.handlers?.listTools && params.handlers.callTool)
+  );
+}
+
+/**
+ * determines if server has task capability
+ * @param params server configuration options
+ * @returns true if any task endpoint is available
+ */
+export function hasTasksCapability(params: CapabilityParams): boolean {
+  return !!(
+    params.handlers?.getTask ??
+    params.handlers?.getTaskResult ??
+    params.handlers?.listTasks ??
+    params.handlers?.cancelTask
   );
 }

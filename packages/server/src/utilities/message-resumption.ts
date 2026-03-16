@@ -68,7 +68,7 @@ export async function replayUndeliveredEvents(
       event.type === 'server-message' &&
       event.responseToRequestId === lastEvent.responseToRequestId
     ) {
-      // NOTE: do not use session.reply since it will add events to the data store
+      // NOTE: do not use session.notify since it will add events to the data store
       await context.write(event.message);
     }
   }

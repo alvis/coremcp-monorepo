@@ -6,13 +6,15 @@
  * @module
  */
 
+import { jsonifyError } from '@coremcp/core';
+
 import {
   getVersionedValidators,
   JsonRpcError,
   MCP_ERROR_CODES,
 } from '@coremcp/protocol';
 
-import { handleMessageError } from './error-handler';
+import { createErrorMessageEnvelope } from './error-handler';
 
 import type { Log, Session } from '@coremcp/core';
 import type { JsonRpcNotificationEnvelope } from '@coremcp/protocol';
@@ -73,6 +75,12 @@ export async function processNotification(
       { notification: message.method },
     );
   } catch (exception) {
-    await handleMessageError({ message, exception, session, log });
+    log?.('error', `failed to handle JSON-RPC notification`, {
+      method: message.method,
+      error: jsonifyError(exception),
+    });
+
+    const errorMessage = createErrorMessageEnvelope(message.id, exception);
+    await session.notify(errorMessage);
   }
 }

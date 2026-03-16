@@ -36,7 +36,7 @@ export async function broadcastResourceUpdate(
     [...subscribers].map(async (sessionId) => {
       const session = activeSessions.get(sessionId)!;
 
-      return session.reply({
+      return session.notify({
         method: 'notifications/resources/updated',
         params: { uri },
       });
