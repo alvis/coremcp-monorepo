@@ -7,8 +7,6 @@ export type {
   JsonValue,
 } from '#json';
 
-export type { AppInfo } from '#app';
-
 export { SUPPORTED_PROTOCOL_VERSIONS } from '#constants';
 
 export {
@@ -41,7 +39,6 @@ export type {
   McpError,
   McpErrorCode,
   McpLogLevel,
-  PrimitiveSchemaDefinition,
   ProgressToken,
   RequestId,
   Role,
@@ -93,6 +90,8 @@ export type {
   ResourceLink,
   SamplingMessage,
   TextContent,
+  ToolResultContent,
+  ToolUseContent,
 } from '#content';
 
 export type {
@@ -129,6 +128,7 @@ export type {
   ListToolsResult,
   Tool,
   ToolAnnotations,
+  ToolExecution,
 } from '#tools';
 
 export type {
@@ -145,9 +145,24 @@ export type { ListRootsRequest, ListRootsResult, Root } from '#roots';
 export type { SetLevelRequest } from '#logging';
 
 export type { ElicitRequest, ElicitResult } from '#elicitation';
+export type {
+  BooleanSchema,
+  EnumSchema,
+  LegacyTitledEnumSchema,
+  MultiSelectEnumSchema,
+  NumberSchema,
+  PrimitiveSchemaDefinition,
+  SingleSelectEnumSchema,
+  StringSchema,
+  TitledMultiSelectEnumSchema,
+  TitledSingleSelectEnumSchema,
+  UntitledMultiSelectEnumSchema,
+  UntitledSingleSelectEnumSchema,
+} from '#elicitation';
 
 export type {
   CancelledNotification,
+  ElicitationCompleteNotification,
   InitializedNotification,
   LoggingMessageNotification,
   ProgressNotification,
@@ -155,8 +170,24 @@ export type {
   ResourceListChangedNotification,
   ResourceUpdatedNotification,
   RootsListChangedNotification,
+  TaskStatusNotification,
   ToolListChangedNotification,
 } from '#notifications';
+
+export type {
+  CancelTaskRequest,
+  CancelTaskResult,
+  CreateTaskResult,
+  GetTaskPayloadRequest,
+  GetTaskPayloadResult,
+  GetTaskRequest,
+  GetTaskResult,
+  ListTasksRequest,
+  ListTasksResult,
+  Task,
+  TaskMetadata,
+  TaskStatus,
+} from '#tasks';
 
 export {
   createMessageValidator,

@@ -4,6 +4,7 @@ import type { ElicitRequest, ElicitResult } from '#elicitation';
 import type { SetLevelRequest } from '#logging';
 import type {
   CancelledNotification,
+  ElicitationCompleteNotification,
   InitializedNotification,
   LoggingMessageNotification,
   ProgressNotification,
@@ -11,6 +12,7 @@ import type {
   ResourceListChangedNotification,
   ResourceUpdatedNotification,
   RootsListChangedNotification,
+  TaskStatusNotification,
   ToolListChangedNotification,
 } from '#notifications';
 import type { RequestId } from '#primitives';
@@ -32,6 +34,17 @@ import type {
 } from '#resources';
 import type { ListRootsRequest, ListRootsResult } from '#roots';
 import type { CreateMessageRequest, CreateMessageResult } from '#sampling';
+import type {
+  CancelTaskRequest,
+  CancelTaskResult,
+  CreateTaskResult,
+  GetTaskPayloadRequest,
+  GetTaskPayloadResult,
+  GetTaskRequest,
+  GetTaskResult,
+  ListTasksRequest,
+  ListTasksResult,
+} from '#tasks';
 import type {
   CallToolRequest,
   CallToolResult,
@@ -56,7 +69,11 @@ export type McpClientRequest =
   | ListPromptsRequest
   | GetPromptRequest
   | CompleteRequest
-  | SetLevelRequest;
+  | SetLevelRequest
+  | GetTaskRequest
+  | GetTaskPayloadRequest
+  | ListTasksRequest
+  | CancelTaskRequest;
 
 /** union of all possible server-initiated requests to a client */
 export type McpServerRequest =
@@ -71,6 +88,7 @@ export type McpRequest = McpClientRequest | McpServerRequest;
 export type McpServerReply =
   | InitializeResult
   | CallToolResult
+  | CreateTaskResult
   | ListToolsResult
   | ListResourcesResult
   | ListResourceTemplatesResult
@@ -78,11 +96,16 @@ export type McpServerReply =
   | ListPromptsResult
   | GetPromptResult
   | CompleteResult
+  | GetTaskResult
+  | GetTaskPayloadResult
+  | ListTasksResult
+  | CancelTaskResult
   | EmptyResult;
 
 /** union of all possible client response types */
 export type McpClientReply =
   | CreateMessageResult
+  | CreateTaskResult
   | ListRootsResult
   | ElicitResult;
 
@@ -96,6 +119,8 @@ export type McpServerNotification =
   | PromptListChangedNotification
   | ToolListChangedNotification
   | LoggingMessageNotification
+  | ElicitationCompleteNotification
+  | TaskStatusNotification
   | McpBidirectionalNotification;
 
 /** union of all possible client-to-server notifications */
@@ -258,7 +283,39 @@ export interface ElicitMessage extends MessageBase {
   type: 'server-to-client';
   id: RequestId;
   message: ElicitRequest;
-  reply?: ElicitResult;
+  reply?: ElicitResult | CreateTaskResult;
+}
+
+/** message wrapper for retrieving task state */
+export interface GetTaskMessage extends MessageBase {
+  type: 'client-to-server';
+  id: RequestId;
+  message: GetTaskRequest;
+  reply?: GetTaskResult;
+}
+
+/** message wrapper for retrieving task payloads */
+export interface GetTaskPayloadMessage extends MessageBase {
+  type: 'client-to-server';
+  id: RequestId;
+  message: GetTaskPayloadRequest;
+  reply?: GetTaskPayloadResult;
+}
+
+/** message wrapper for listing tasks */
+export interface ListTasksMessage extends MessageBase {
+  type: 'client-to-server';
+  id: RequestId;
+  message: ListTasksRequest;
+  reply?: ListTasksResult;
+}
+
+/** message wrapper for cancelling tasks */
+export interface CancelTaskMessage extends MessageBase {
+  type: 'client-to-server';
+  id: RequestId;
+  message: CancelTaskRequest;
+  reply?: CancelTaskResult;
 }
 
 /** union of all possible client-to-server message types */

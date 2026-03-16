@@ -1,11 +1,12 @@
 /**
  * prompt-related methods and types
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/prompts
  */
 
 import type { ContentBlock } from '#content';
+import type { JsonifibleObject } from '#json';
 import type { JsonRpcRequestData, JsonRpcResultData } from '#jsonrpc';
-import type { Cursor, Role } from '#primitives';
+import type { Cursor, Icon, Role } from '#primitives';
 
 /** reusable prompt template that servers can provide to clients _(since 2024-11-05)_ */
 export type Prompt = {
@@ -17,6 +18,10 @@ export type Prompt = {
   name: string;
   /** human-readable display name for ui contexts _(since 2025-06-18)_ */
   title?: string;
+  /** icons that clients may display for this prompt _(since 2025-11-25)_ */
+  icons?: Icon[];
+  /** optional metadata for protocol-level extensions */
+  _meta?: JsonifibleObject;
 };
 
 /** parameter definition for a prompt template _(since 2024-11-05)_ */
@@ -51,7 +56,7 @@ export type PromptReference = {
 
 /**
  * request to discover all prompt templates available from the server with optional pagination _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#listing-prompts
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/prompts#listing-prompts
  */
 export interface ListPromptsRequest extends JsonRpcRequestData {
   /** JSON-RPC method name for listing prompts */
@@ -65,7 +70,7 @@ export interface ListPromptsRequest extends JsonRpcRequestData {
 
 /**
  * server response containing available prompt templates and optional pagination continuation _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#listing-prompts
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/prompts#listing-prompts
  */
 export interface ListPromptsResult extends JsonRpcResultData {
   /** cursor for fetching additional results if more are available */
@@ -76,7 +81,7 @@ export interface ListPromptsResult extends JsonRpcResultData {
 
 /**
  * request to retrieve a specific prompt template with optional argument substitution _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#getting-a-prompt
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/prompts#getting-a-prompt
  */
 export interface GetPromptRequest extends JsonRpcRequestData {
   /** JSON-RPC method name for getting prompts */
@@ -92,7 +97,7 @@ export interface GetPromptRequest extends JsonRpcRequestData {
 
 /**
  * server response containing the processed prompt with arguments applied _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#getting-a-prompt
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/prompts#getting-a-prompt
  */
 export interface GetPromptResult extends JsonRpcResultData {
   /** human-readable explanation of what this prompt accomplishes */

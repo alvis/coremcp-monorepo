@@ -1,10 +1,11 @@
 /**
  * content types and message formats
- * @see https://modelcontextprotocol.io/specification/2025-06-18/basic/content
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/basic/content
  */
 
 import type { Annotations, Role } from '#primitives';
 import type { BlobResourceContents, TextResourceContents } from '#resources';
+import type { JsonifibleObject } from '#json';
 
 /** textual content that can be processed directly by LLMs and displayed to users _(since 2024-11-05)_ */
 export type TextContent = {
@@ -12,6 +13,8 @@ export type TextContent = {
   annotations?: Annotations;
   /** the actual text content */
   text: string;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
   /** content type discriminator */
   type: 'text';
 };
@@ -24,6 +27,8 @@ export type ImageContent = {
   data: string;
   /** mime type of the image (providers may support different formats) */
   mimeType: string;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
   /** content type discriminator */
   type: 'image';
 };
@@ -36,6 +41,8 @@ export type AudioContent = {
   data: string;
   /** mime type of the audio (providers may support different formats) */
   mimeType: string;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
   /** content type discriminator */
   type: 'audio';
 };
@@ -58,6 +65,8 @@ export type ResourceLink = {
   type: 'resource_link';
   /** URI of the resource being referenced */
   uri: string;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
 };
 
 /** resource content directly embedded within a message rather than referenced by uri _(since 2024-11-05)_ */
@@ -66,8 +75,40 @@ export type EmbeddedResource = {
   annotations?: Annotations;
   /** the actual resource content (text or binary) */
   resource: TextResourceContents | BlobResourceContents;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
   /** content type discriminator */
   type: 'resource';
+};
+
+/** request from the assistant to call a tool during sampling _(since 2025-11-25)_ */
+export type ToolUseContent = {
+  /** content type discriminator */
+  type: 'tool_use';
+  /** unique identifier used to match tool results */
+  id: string;
+  /** tool name to call */
+  name: string;
+  /** input arguments for the tool */
+  input: JsonifibleObject;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
+};
+
+/** result of a prior tool use provided back to the model _(since 2025-11-25)_ */
+export type ToolResultContent = {
+  /** content type discriminator */
+  type: 'tool_result';
+  /** identifier of the related tool use */
+  toolUseId: string;
+  /** unstructured result content */
+  content: ContentBlock[];
+  /** structured tool output */
+  structuredContent?: JsonifibleObject;
+  /** whether the tool use resulted in an error */
+  isError?: boolean;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
 };
 
 /** union of all possible content types that can appear in messages _(since 2024-11-05)_ */
@@ -80,10 +121,24 @@ export type ContentBlock =
 
 /** message structure used for LLM sampling requests containing role and content _(since 2024-11-05)_ */
 export type SamplingMessage = {
-  /** the message content _(AudioContent since 2025-03-26)_ */
-  content: TextContent | ImageContent | AudioContent;
+  /** the message content */
+  content:
+    | TextContent
+    | ImageContent
+    | AudioContent
+    | ToolUseContent
+    | ToolResultContent
+    | Array<
+        | TextContent
+        | ImageContent
+        | AudioContent
+        | ToolUseContent
+        | ToolResultContent
+      >;
   /** role of the message sender (user or assistant) */
   role: Role;
+  /** protocol metadata for preserving provider details */
+  _meta?: JsonifibleObject;
 };
 
 /** structured message content used throughout the MCP protocol */

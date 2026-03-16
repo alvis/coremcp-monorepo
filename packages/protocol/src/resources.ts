@@ -1,10 +1,11 @@
 /**
  * resource-related methods and types
- * @see https://modelcontextprotocol.io/specification/2024-11-05/server/resources
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/resources
  */
 
+import type { JsonifibleObject } from '#json';
 import type { JsonRpcRequestData, JsonRpcResultData } from '#jsonrpc';
-import type { Annotations, Cursor } from '#primitives';
+import type { Annotations, Cursor, Icon } from '#primitives';
 
 /** readable data source that servers can provide to clients _(since 2024-11-05)_ */
 export type Resource = {
@@ -22,6 +23,10 @@ export type Resource = {
   size?: number;
   /** human-readable display name for ui contexts _(since 2025-06-18)_ */
   title?: string;
+  /** icons that clients may display for this resource _(since 2025-11-25)_ */
+  icons?: Icon[];
+  /** optional metadata for protocol-level extensions */
+  _meta?: JsonifibleObject;
 };
 
 /** parameterized resource definition that can generate multiple resources _(since 2024-11-05)_ */
@@ -36,8 +41,12 @@ export type ResourceTemplate = {
   name: string;
   /** human-readable display name for ui contexts _(since 2025-06-18)_ */
   title?: string;
+  /** icons that clients may display for this resource template _(since 2025-11-25)_ */
+  icons?: Icon[];
   /** rfc 6570 uri template for constructing resource uris */
   uriTemplate: string;
+  /** optional metadata for protocol-level extensions */
+  _meta?: JsonifibleObject;
 };
 
 /** textual content from a resource that can be represented as a string _(since 2024-11-05)_ */

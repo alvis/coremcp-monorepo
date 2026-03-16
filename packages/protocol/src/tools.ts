@@ -1,12 +1,12 @@
 /**
  * tool-related methods and types
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/tools
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/tools
  */
 
 import type { ContentBlock } from '#content';
-import type { JsonifibleValue } from '#json';
+import type { JsonifibleObject, JsonifibleValue } from '#json';
 import type { JsonRpcRequestData, JsonRpcResultData } from '#jsonrpc';
-import type { Cursor, JsonSchema } from '#primitives';
+import type { Cursor, Icon, JsonSchema } from '#primitives';
 
 /** executable functionality that servers provide to clients for performing actions _(since 2024-11-05)_ */
 export type Tool = {
@@ -15,13 +15,19 @@ export type Tool = {
   /** human-readable display name for ui contexts _(since 2025-06-18)_ */
   title?: string;
   /** human-readable explanation of what this tool does */
-  description: string;
+  description?: string;
+  /** icons that clients may display for this tool _(since 2025-11-25)_ */
+  icons?: Icon[];
   /** json schema defining the structure of arguments this tool accepts */
   inputSchema: JsonSchema;
+  /** execution-related tool metadata _(since 2025-11-25)_ */
+  execution?: ToolExecution;
   /** json schema defining the structure of this tool's structured output _(since 2025-06-18)_ */
   outputSchema?: JsonSchema;
   /** optional hints about tool behavior and characteristics _(since 2025-03-26)_ */
   annotations?: ToolAnnotations;
+  /** optional metadata for protocol-level extensions */
+  _meta?: JsonifibleObject;
 };
 
 /** behavioral hints about a tool's characteristics (all are hints, not guarantees) _(since 2025-03-26)_ */
@@ -38,9 +44,15 @@ export type ToolAnnotations = {
   title?: string;
 };
 
+/** execution-related properties for a tool _(since 2025-11-25)_ */
+export type ToolExecution = {
+  /** indicates whether the tool supports task-augmented execution */
+  taskSupport?: 'forbidden' | 'optional' | 'required';
+};
+
 /**
  * request to discover all executable tools available from the server with optional pagination _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/tools#listing-tools
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/tools#listing-tools
  */
 export interface ListToolsRequest extends JsonRpcRequestData {
   /** JSON-RPC method name for listing tools */
@@ -54,7 +66,7 @@ export interface ListToolsRequest extends JsonRpcRequestData {
 
 /**
  * server response containing available tools and optional pagination continuation _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/tools#listing-tools
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/tools#listing-tools
  */
 export interface ListToolsResult extends JsonRpcResultData {
   /** cursor for fetching additional results if more are available */
@@ -65,13 +77,17 @@ export interface ListToolsResult extends JsonRpcResultData {
 
 /**
  * request to execute a specific tool with provided arguments _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/tools#calling-tools
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/tools#calling-tools
  */
 export interface CallToolRequest extends JsonRpcRequestData {
   /** JSON-RPC method name for calling tools */
   method: 'tools/call';
   /** parameters specifying which tool to call and how */
   params: {
+    /** task augmentation request metadata */
+    task?: {
+      ttl?: number;
+    };
     /** key-value arguments matching the tool's input schema */
     arguments?: Record<string, JsonifibleValue>;
     /** programmatic identifier of the tool to execute */
@@ -81,7 +97,7 @@ export interface CallToolRequest extends JsonRpcRequestData {
 
 /**
  * server response containing the results of tool execution _(since 2024-11-05)_
- * @see https://modelcontextprotocol.io/specification/2025-06-18/server/tools#calling-tools
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/server/tools#calling-tools
  */
 export interface CallToolResult extends JsonRpcResultData {
   /** unstructured results as content blocks (text, images, resources, etc.) */
@@ -90,4 +106,6 @@ export interface CallToolResult extends JsonRpcResultData {
   isError?: boolean;
   /** structured results matching the tool's output schema _(since 2025-06-18)_ */
   structuredContent?: Record<string, JsonifibleValue>;
+  /** optional metadata for protocol-level extensions */
+  _meta?: JsonifibleObject;
 }
