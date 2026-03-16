@@ -238,13 +238,16 @@ Request LLM sampling/message generation from client.
 - `temperature` (number, optional): Sampling temperature
 - `includeContext` (string, optional): Context inclusion preference
 - `metadata` (object, optional): Provider-specific metadata _(since 2025-03-26)_
+- `task` (object, optional): Task metadata for asynchronous execution _(since 2025-11-25)_
+- `tools` (array, optional): Available tools the model may use during sampling _(since 2025-11-25)_
+- `toolChoice` (object, optional): Tool selection policy for sampling _(since 2025-11-25)_
 
 **Response:**
 
 - `role` (Role): Message role
-- `content` (ContentBlock): Message content
+- `content` (SamplingContent): Message content, which may include tool use/result blocks _(since 2025-11-25)_
 - `model` (string): Model used for generation
-- `stopReason` (string, optional): Reason sampling stopped
+- `stopReason` (string, optional): Reason sampling stopped, including `toolUse` _(since 2025-11-25)_
 
 ---
 
@@ -270,13 +273,96 @@ Request additional user input via client.
 
 **Parameters:**
 
+- `mode` (string, optional): Elicitation mode, `form` or `url` _(since 2025-11-25 URL mode)_
 - `message` (string): Message to present to user
 - `requestedSchema` (object): Schema for requested input
+- `url` (string, required for URL mode): URL for out-of-band interaction _(since 2025-11-25)_
+- `elicitationId` (string, required for URL mode): Correlation ID for URL mode completion _(since 2025-11-25)_
+- `task` (object, optional): Task metadata for asynchronous execution _(since 2025-11-25)_
 
 **Response:**
 
 - `action` (string): User action (accept/decline/cancel)
 - `content` (object, optional): Submitted form data (when action=accept)
+
+---
+
+## Bidirectional Methods
+
+### tasks/get _(since 2025-11-25, experimental)_
+
+Retrieve the latest status for a task created by a task-augmented request.
+
+**Documentation:** [Utilities - Tasks](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks)
+
+**Parameters:**
+
+- `taskId` (string): Task identifier to inspect
+
+**Response:**
+
+- `taskId` (string): Task identifier
+- `status` (TaskStatus): Current task status
+- `statusMessage` (string, optional): Human-readable status text
+- `createdAt` (string): Task creation timestamp
+- `lastUpdatedAt` (string): Task update timestamp
+- `ttl` (number | null): Retention time in milliseconds
+- `pollInterval` (number, optional): Suggested polling interval in milliseconds
+
+---
+
+### tasks/result _(since 2025-11-25, experimental)_
+
+Retrieve the final payload for a completed task.
+
+**Documentation:** [Utilities - Tasks](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks)
+
+**Parameters:**
+
+- `taskId` (string): Task identifier to resolve
+
+**Response:**
+
+- Arbitrary JSON-RPC result payload produced by the original task-backed request
+
+---
+
+### tasks/list _(since 2025-11-25, experimental)_
+
+List tasks visible to the current MCP peer.
+
+**Documentation:** [Utilities - Tasks](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks)
+
+**Parameters:**
+
+- `cursor` (string, optional): Pagination cursor
+
+**Response:**
+
+- `tasks` (array): Visible task descriptors
+- `nextCursor` (string, optional): Next pagination cursor
+
+---
+
+### tasks/cancel _(since 2025-11-25, experimental)_
+
+Request cancellation for a previously created task.
+
+**Documentation:** [Utilities - Tasks](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks)
+
+**Parameters:**
+
+- `taskId` (string): Task identifier to cancel
+
+**Response:**
+
+- `taskId` (string): Task identifier
+- `status` (TaskStatus): Updated task status
+- `statusMessage` (string, optional): Human-readable status text
+- `createdAt` (string): Task creation timestamp
+- `lastUpdatedAt` (string): Task update timestamp
+- `ttl` (number | null): Retention time in milliseconds
+- `pollInterval` (number, optional): Suggested polling interval in milliseconds
 
 ---
 
@@ -360,6 +446,18 @@ Server log message notification to client.
 
 ---
 
+### notifications/elicitation/complete _(since 2025-11-25)_
+
+Server notification that a URL-based elicitation flow finished outside the JSON-RPC response channel.
+
+**Documentation:** [Client - Elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation)
+
+**Parameters:**
+
+- `elicitationId` (string): Identifier from the original URL mode `elicitation/create` request
+
+---
+
 ## Bidirectional Notifications
 
 ### notifications/cancelled _(since 2025-03-26)_
@@ -390,6 +488,24 @@ Progress update for long-running requests. Can be sent by either client or serve
 
 ---
 
+### notifications/tasks/status _(since 2025-11-25, experimental)_
+
+Task status change notification for peers that support push-style task updates.
+
+**Documentation:** [Utilities - Tasks](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks)
+
+**Parameters:**
+
+- `taskId` (string): Task identifier
+- `status` (TaskStatus): Current task state
+- `statusMessage` (string, optional): Human-readable status text
+- `createdAt` (string): Task creation timestamp
+- `lastUpdatedAt` (string): Task update timestamp
+- `ttl` (number | null): Retention time in milliseconds
+- `pollInterval` (number, optional): Suggested polling interval in milliseconds
+
+---
+
 ## Data Types
 
 ### LoggingLevel _(since 2024-11-05)_
@@ -404,6 +520,10 @@ Enum: `user`, `assistant`
 
 Union of: `TextContent` _(since 2024-11-05)_, `ImageContent` _(since 2024-11-05)_, `AudioContent` _(since 2025-03-26)_, `ResourceLink` _(since 2025-06-18)_, `EmbeddedResource` _(since 2024-11-05)_
 
+### SamplingContent _(since 2024-11-05)_
+
+Union of: `TextContent` _(since 2024-11-05)_, `ImageContent` _(since 2024-11-05)_, `AudioContent` _(since 2025-03-26)_, `ToolUseContent` _(since 2025-11-25)_, `ToolResultContent` _(since 2025-11-25)_, or an array containing those values
+
 ### RequestId _(since 2024-11-05)_
 
 String or integer uniquely identifying a JSON-RPC request
@@ -411,3 +531,7 @@ String or integer uniquely identifying a JSON-RPC request
 ### ProgressToken _(since 2025-03-26)_
 
 String or integer for associating progress notifications with requests
+
+### TaskStatus _(since 2025-11-25, experimental)_
+
+Enum: `working`, `input_required`, `completed`, `failed`, `cancelled`

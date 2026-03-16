@@ -600,7 +600,7 @@ describe('cl:StdioConnector', () => {
       const result = await connector.callTool('echo', { message: 'hello' });
 
       expect(result.content).toHaveLength(1);
-      expect(result.content[0]).toMatchObject({
+      expect(result.content![0]).toMatchObject({
         type: 'text',
         text: 'hello',
       });
