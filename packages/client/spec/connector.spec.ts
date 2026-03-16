@@ -667,6 +667,76 @@ describe('cl:McpConnector', () => {
     });
   });
 
+  describe('mt:getTask', () => {
+    it('should send tasks/get request', async () => {
+      const connector = createMethodResponder('tasks/get', {
+        taskId: 'task-123',
+        status: 'working',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+        ttl: null,
+      });
+      await connectConnector(connector);
+
+      const result = await connector.getTask('task-123');
+
+      expect(connector.sentMessages).toContainEqual(
+        expect.objectContaining({
+          method: 'tasks/get',
+          params: expect.objectContaining({ taskId: 'task-123' }),
+        }),
+      );
+      expect(result).toEqual({
+        taskId: 'task-123',
+        status: 'working',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+        ttl: null,
+      });
+    });
+  });
+
+  describe('mt:listTasks', () => {
+    it('should send tasks/list request', async () => {
+      const connector = createMethodResponder('tasks/list', {
+        tasks: [],
+      });
+      await connectConnector(connector);
+
+      const result = await connector.listTasks();
+
+      expect(connector.sentMessages).toContainEqual(
+        expect.objectContaining({
+          method: 'tasks/list',
+        }),
+      );
+      expect(result).toEqual({ tasks: [] });
+    });
+  });
+
+  describe('mt:cancelTask', () => {
+    it('should send tasks/cancel request', async () => {
+      const connector = createMethodResponder('tasks/cancel', {
+        taskId: 'task-123',
+        status: 'cancelled',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        lastUpdatedAt: '2026-03-08T00:01:00.000Z',
+        ttl: null,
+      });
+      await connectConnector(connector);
+
+      const result = await connector.cancelTask('task-123');
+
+      expect(connector.sentMessages).toContainEqual(
+        expect.objectContaining({
+          method: 'tasks/cancel',
+          params: expect.objectContaining({ taskId: 'task-123' }),
+        }),
+      );
+      expect(result.status).toBe('cancelled');
+    });
+  });
+
   describe('mt:complete', () => {
     it('should send completion/complete request with prompt reference', async () => {
       const connector = createMethodResponder('completion/complete', {

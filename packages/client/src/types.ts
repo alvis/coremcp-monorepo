@@ -11,6 +11,7 @@ import type {
   ProgressToken,
   RequestId,
   ServerCapabilities,
+  Task,
 } from '@coremcp/protocol';
 
 import type { McpConnector } from '#connector';
@@ -153,6 +154,30 @@ export interface OnCancelledParams {
 
 /** callback for cancelled notifications */
 export type OnCancelled = (params: OnCancelledParams) => void | Promise<void>;
+
+/** parameters for onElicitationComplete hook */
+export interface OnElicitationCompleteParams {
+  /** the connector that sent this notification */
+  connector: McpConnector;
+  /** opaque identifier for the completed elicitation */
+  elicitationId: string;
+}
+
+/** callback for out-of-band elicitation completion notifications */
+export type OnElicitationComplete = (
+  params: OnElicitationCompleteParams,
+) => void | Promise<void>;
+
+/** parameters for onTaskStatus hook */
+export interface OnTaskStatusParams {
+  /** the connector that sent this notification */
+  connector: McpConnector;
+  /** latest task state reported by the server */
+  task: Task;
+}
+
+/** callback for task status change notifications */
+export type OnTaskStatus = (params: OnTaskStatusParams) => void | Promise<void>;
 
 /** parameters for onLogMessage hook */
 export interface OnLogMessageParams {

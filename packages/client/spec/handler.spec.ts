@@ -7,6 +7,7 @@ import {
 } from '#handler';
 
 import type {
+  CreateTaskResult,
   ElicitResult,
   McpServerNotification,
   McpServerRequest,
@@ -41,6 +42,37 @@ describe('fn:createServerRequestHandler', () => {
 
       expect(result).toEqual({ result: mockElicitResult });
       expect(onElicitation).toHaveBeenCalledWith(request.params);
+    });
+
+    it('should pass through task results returned by elicitation callback', async () => {
+      const taskResult: CreateTaskResult = {
+        task: {
+          taskId: 'task-123',
+          status: 'working',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+          ttl: null,
+        },
+      };
+      const onElicitation = vi.fn().mockResolvedValue(taskResult);
+      const roots: Root[] = [];
+      const handler = createServerRequestHandler({ onElicitation, roots });
+      const request: McpServerRequest = {
+        jsonrpc: '2.0',
+        id: 10,
+        method: 'elicitation/create',
+        params: {
+          message: 'test message',
+          requestedSchema: {
+            properties: {},
+            type: 'object',
+          },
+        },
+      };
+
+      const result = await handler(request);
+
+      expect(result).toEqual({ result: taskResult });
     });
   });
 
@@ -230,6 +262,58 @@ describe('fn:createServerNotificationHandler', () => {
         level: 'info',
         data: 'test log message',
         logger: undefined,
+      });
+    });
+  });
+
+  describe('notifications/elicitation/complete', () => {
+    it('should handle elicitation completion notification', async () => {
+      const onElicitationComplete = vi.fn();
+      const handler = createServerNotificationHandler({
+        onElicitationComplete,
+      });
+      const notification = {
+        method: 'notifications/elicitation/complete',
+        params: {
+          elicitationId: 'elicitation-123',
+        },
+      } as McpServerNotification;
+
+      await handler(mockConnector, notification);
+
+      expect(onElicitationComplete).toHaveBeenCalledWith({
+        connector: mockConnector,
+        elicitationId: 'elicitation-123',
+      });
+    });
+  });
+
+  describe('notifications/tasks/status', () => {
+    it('should handle task status notification', async () => {
+      const onTaskStatus = vi.fn();
+      const handler = createServerNotificationHandler({ onTaskStatus });
+      const notification = {
+        method: 'notifications/tasks/status',
+        params: {
+          taskId: 'task-123',
+          status: 'working',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+          ttl: null,
+        },
+      } as McpServerNotification;
+
+      await handler(mockConnector, notification);
+
+      expect(onTaskStatus).toHaveBeenCalledWith({
+        connector: mockConnector,
+        task: {
+          taskId: 'task-123',
+          status: 'working',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+          ttl: null,
+        },
       });
     });
   });

@@ -230,25 +230,16 @@ describe('ToolManager', () => {
       expect(result).toEqual(expectedResult);
     });
 
-    it('should handle tool execution errors', async () => {
-      const errorResult: CallToolResult = {
-        content: [
-          {
-            type: 'text',
-            text: 'Tool execution failed: Invalid input',
-          },
-        ],
-        isError: true,
-      };
+    it('should propagate tool execution errors as thrown exceptions', async () => {
+      callToolFn1.mockRejectedValue(
+        new Error('Tool execution failed: Invalid input'),
+      );
 
-      callToolFn1.mockResolvedValue(errorResult);
-
-      const result = await manager.callTool('server1', 'failing-tool', {
-        invalidArg: 'bad-value',
-      });
-
-      expect(result).toEqual(errorResult);
-      expect(result.isError).toBe(true);
+      await expect(
+        manager.callTool('server1', 'failing-tool', {
+          invalidArg: 'bad-value',
+        }),
+      ).rejects.toThrow('Tool execution failed: Invalid input');
     });
 
     it('should throw error if server not found', async () => {

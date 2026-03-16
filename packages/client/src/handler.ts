@@ -3,6 +3,7 @@ import { MCP_ERROR_CODES } from '@coremcp/protocol';
 
 import type { Log } from '@coremcp/core';
 import type {
+  CreateTaskResult,
   CreateMessageRequest,
   CreateMessageResult,
   ElicitRequest,
@@ -15,6 +16,7 @@ import type {
   ProgressToken,
   RequestId,
   Root,
+  Task,
 } from '@coremcp/protocol';
 
 import type { CacheManager, ListType as CacheListType } from '#cache';
@@ -22,10 +24,12 @@ import type { ConnectionManager } from '#connection';
 import type { McpConnector } from '#connector';
 import type {
   OnCancelled,
+  OnElicitationComplete,
   OnListChange,
   OnLogMessage,
   OnProgress,
   OnResourceChange,
+  OnTaskStatus,
 } from '#types';
 
 /** type of list that can be changed */
@@ -34,12 +38,12 @@ export type ListType = 'prompts' | 'tools' | 'resources';
 /** callback for handling elicitation requests from server */
 export type ElicitationCallback = (
   request: ElicitRequest['params'],
-) => Promise<ElicitResult>;
+) => Promise<ElicitResult | CreateTaskResult>;
 
 /** callback for handling sampling requests from server */
 export type SamplingCallback = (
   request: CreateMessageRequest['params'],
-) => Promise<CreateMessageResult>;
+) => Promise<CreateMessageResult | CreateTaskResult>;
 
 /** dependencies needed for server request handler */
 export interface CreateServerRequestHandlerParams {
@@ -63,8 +67,12 @@ export interface ServerNotificationHandlerDependencies {
   onProgress?: OnProgress;
   /** callback for cancelled notifications */
   onCancelled?: OnCancelled;
+  /** callback for out-of-band elicitation completion notifications */
+  onElicitationComplete?: OnElicitationComplete;
   /** callback for log message notifications */
   onLogMessage?: OnLogMessage;
+  /** callback for task status notifications */
+  onTaskStatus?: OnTaskStatus;
   /** optional logger for debugging */
   log?: Log;
   /** optional cache manager for auto-refresh on list changes */
@@ -87,8 +95,12 @@ interface NotificationContext {
   onProgress?: OnProgress;
   /** callback for cancelled notifications */
   onCancelled?: OnCancelled;
+  /** callback for out-of-band elicitation completion notifications */
+  onElicitationComplete?: OnElicitationComplete;
   /** callback for log message notifications */
   onLogMessage?: OnLogMessage;
+  /** callback for task status notifications */
+  onTaskStatus?: OnTaskStatus;
   /** optional cache manager for auto-refresh on list changes */
   cacheManager?: CacheManager;
   /** function to refresh list from server */
@@ -216,6 +228,10 @@ async function dispatchNotification(
       return handleProgress(context, notification.params);
     case 'notifications/cancelled':
       return handleCancelled(context, notification.params);
+    case 'notifications/elicitation/complete':
+      return handleElicitationComplete(context, notification.params);
+    case 'notifications/tasks/status':
+      return handleTaskStatus(context, notification.params);
     default:
       context.log?.('warn', 'Unknown notification from server', {
         method: (notification as { method: string }).method,
@@ -344,6 +360,41 @@ async function handleCancelled(
     connector: context.connector,
     requestId: params.requestId,
     reason: params.reason,
+  });
+}
+
+/**
+ * handles out-of-band elicitation completion notifications
+ * @param context notification handler context
+ * @param params completion parameters
+ * @param params.elicitationId opaque identifier for the completed elicitation
+ */
+async function handleElicitationComplete(
+  context: NotificationContext,
+  params: { elicitationId: string },
+): Promise<void> {
+  context.log?.('debug', 'Elicitation completed', params);
+
+  await context.onElicitationComplete?.({
+    connector: context.connector,
+    elicitationId: params.elicitationId,
+  });
+}
+
+/**
+ * handles task status notifications
+ * @param context notification handler context
+ * @param task latest task state sent by the server
+ */
+async function handleTaskStatus(
+  context: NotificationContext,
+  task: Task,
+): Promise<void> {
+  context.log?.('debug', 'Task status updated', task);
+
+  await context.onTaskStatus?.({
+    connector: context.connector,
+    task,
   });
 }
 

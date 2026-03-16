@@ -27,7 +27,7 @@ export const testClientCapabilities: ClientCapabilities = {
 
 /** standard test server initialization result */
 export const testInitializeResult: InitializeResult = {
-  protocolVersion: '2025-06-18',
+  protocolVersion: '2025-11-25',
   capabilities: {
     tools: { listChanged: true },
     prompts: { listChanged: true },
