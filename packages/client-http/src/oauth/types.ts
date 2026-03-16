@@ -39,6 +39,9 @@ export interface AuthorizationServerMetadata {
   /** JSON array of PKCE code challenge methods supported */
   code_challenge_methods_supported?: string[];
 
+  /** whether the server supports client ID metadata documents for public clients */
+  client_id_metadata_document_supported?: boolean;
+
   /** URL for authorization server documentation */
   service_documentation?: string;
 

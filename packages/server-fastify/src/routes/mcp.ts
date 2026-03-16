@@ -17,6 +17,7 @@ import { extractConnectionContext } from '#request-context';
 import {
   validateAcceptHeader,
   validateContentType,
+  validateOrigin,
   validateProtocolVersion,
 } from '#validators';
 
@@ -68,6 +69,7 @@ function createMcpDeleteHandler(
         resolveUserId,
       );
 
+      validateOrigin(request);
       validateProtocolVersion(context.protocolVersion);
 
       await mcpServer.terminateSession(context);
@@ -100,6 +102,7 @@ function createMcpGetHandler(
         resolveUserId,
       );
 
+      validateOrigin(request);
       validateAcceptHeader(request, ['text/event-stream']);
       // NOTE: GET requests don't have a body, so no Content-Type validation needed
       validateProtocolVersion(context.protocolVersion);
@@ -227,17 +230,16 @@ function createMcpPostHandler(
       // terminated or invalid sessions return 404 rather than 406/415
       await mcpServer.validateSession(context);
 
+      validateOrigin(request);
       validateAcceptHeader(request, ['application/json', 'text/event-stream']);
       validateContentType(request);
       validateProtocolVersion(context.protocolVersion);
 
       // parse and validate the json-rpc message
       const message = validateJsonRpcMessage(request.body);
-      const acceptsJson = request.headers.accept?.includes('application/json');
       const wantsStream =
         message.id !== undefined &&
-        request.headers.accept?.includes('text/event-stream') &&
-        !acceptsJson;
+        request.headers.accept?.includes('text/event-stream');
 
       if (!wantsStream) {
         return await handleJsonResponse({ mcpServer, message, context, reply });
@@ -303,12 +305,14 @@ function handleError(params: {
     error instanceof Error &&
     error.message.includes('Invalid JSON-RPC message')
   ) {
-    // validation error from validateJsonRpcMessage - convert to JSON-RPC parse error
+    // validation error from validateJsonRpcMessage - the JSON parsed successfully
+    // but does not conform to the JSON-RPC 2.0 structure (e.g. missing "jsonrpc" field),
+    // so this is an Invalid Request (-32600), not a Parse Error (-32700)
     return reply.code(HTTP_BAD_REQUEST).send({
       jsonrpc: '2.0',
       id: null,
       error: {
-        code: MCP_ERROR_CODES.PARSE_ERROR,
+        code: MCP_ERROR_CODES.INVALID_REQUEST,
         message: error.message,
       },
     });
