@@ -1,6 +1,6 @@
 # **Security Best Practices**
 
-**Protocol Revision:** 2025-06-18
+**Protocol Revision:** 2025-11-25
 
 This document provides security considerations for MCP implementations, identifying attack vectors and best practices for developers, server operators, and security professionals. It should be read alongside the MCP Authorization specification and OAuth 2.0 security best practices.
 

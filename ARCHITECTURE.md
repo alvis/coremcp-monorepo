@@ -68,7 +68,7 @@ The codebase is organized into 9 packages following a clean layered architecture
 
 - **Purpose**: Core MCP protocol types and validation
 - **Key Features**:
-  - Supports multiple protocol versions (2024-11-05, 2025-03-26, 2025-06-18)
+  - Supports multiple protocol versions (2024-11-05, 2025-03-26, 2025-06-18, 2025-11-25)
   - Runtime validation with Zod schemas
   - JSON-RPC 2.0 message definitions
   - Type-safe request/response handling
@@ -196,6 +196,7 @@ The system supports multiple MCP protocol versions with automatic negotiation:
 - **2024-11-05**: Initial MCP specification
 - **2025-03-26**: Enhanced features and capabilities
 - **2025-06-18**: Latest specification with improved streaming support
+- **2025-11-25**: Tasks, richer metadata, and Streamable HTTP refinements
 
 ```typescript
 // From packages/protocol/src/constants.ts
@@ -203,6 +204,7 @@ export const SUPPORTED_PROTOCOL_VERSIONS = [
   '2024-11-05',
   '2025-03-26',
   '2025-06-18',
+  '2025-11-25',
 ];
 ```
 
@@ -238,7 +240,10 @@ packages/protocol/src/schemas/
 ├── 2025-03-26/
 │   ├── schema.json
 │   └── schema.ts
-└── 2025-06-18/
+├── 2025-06-18/
+│   ├── schema.json
+│   └── schema.ts
+└── 2025-11-25/
     ├── schema.json
     └── schema.ts
 ```
@@ -964,7 +969,7 @@ interface PerformanceConfig {
 
 #### Protocol Implementation
 
-- **CoreMCP**: Multi-version support (2024-11-05, 2025-03-26, 2025-06-18) with automatic negotiation
+- **CoreMCP**: Multi-version support (2024-11-05, 2025-03-26, 2025-06-18, 2025-11-25) with automatic negotiation
 - **Official SDK**: Latest version focus with forward compatibility
 
 #### Type Safety & Validation
@@ -1150,8 +1155,10 @@ Both implementations are fully MCP-compliant and can interoperate. Teams can:
 
 1. **SSE Streaming**: Implement true streaming for HTTP transport
 2. **Client Transports**: Complete HTTP client transport implementation
-3. **Testing**: Comprehensive test suite for all packages
-4. **Documentation**: Interactive API documentation portal
+3. **Task Lifecycle UX**: Reduce polling friction and expose richer task helpers
+4. **Transport Diagnostics**: Improve reconnection, buffering, and stream visibility
+5. **Testing**: Comprehensive test suite for all packages
+6. **Documentation**: Interactive API documentation portal
 
 ### Phase 2: Enterprise Features (Q2)
 

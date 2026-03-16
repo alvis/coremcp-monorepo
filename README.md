@@ -327,6 +327,7 @@ mcp-server info
 | **2024-11-05**   | ✅ Complete | Initial MCP specification              |
 | **2025-03-26**   | ✅ Complete | Enhanced capabilities & error handling |
 | **2025-06-18**   | ✅ Complete | Latest with streaming support          |
+| **2025-11-25**   | ✅ Complete | Tasks, richer metadata, Streamable HTTP |
 
 ### Supported Capabilities
 
@@ -335,6 +336,7 @@ mcp-server info
 - ✅ **Prompts** — Template generation with argument completion
 - ✅ **Sampling** — AI model integration for server-to-client requests
 - ✅ **Elicitation** — Interactive user input collection
+- ✅ **Tasks** — Experimental async task tracking and polling
 - ✅ **Logging** — Structured logging with level control
 - ✅ **Progress** — Real-time operation progress reporting
 
@@ -463,13 +465,14 @@ pnpm test
 
 - Complete MCP protocol implementation
 - STDIO and HTTP transports
+- Streamable HTTP responses with JSON or SSE over POST
 - OAuth 2.1 authentication
 - Session management
 - CLI tooling
 
 ### 🚧 In Progress
 
-- Server-Sent Events (SSE) streaming
+- Additional task workflow ergonomics
 - Enhanced monitoring and observability
 - Plugin ecosystem
 
@@ -493,7 +496,7 @@ pnpm test
 | **Protocol Versions**   | All versions (2024-2025)                       | Latest version focus                   |
 | **Type Safety**         | Full TypeScript + runtime validation           | TypeScript with basic validation       |
 | **Authentication**      | OAuth 2.1 + PKCE + session management          | Simple authentication patterns         |
-| **Transports**          | STDIO + HTTP with abstractions                 | STDIO + SSE with direct implementation |
+| **Transports**          | STDIO + Streamable HTTP with abstractions      | STDIO + Streamable HTTP                |
 | **Session Management**  | Enterprise session storage + cleanup           | Basic connection state                 |
 | **Error Handling**      | Standardized JSON-RPC errors + logging         | Direct error propagation               |
 | **Testing**             | Comprehensive test suites                      | Example-focused testing                |

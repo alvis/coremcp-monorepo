@@ -1,6 +1,6 @@
 # **Tools**
 
-**Protocol Revision:** 2025-06-18
+**Protocol Revision:** 2025-11-25
 
 Tools allow language models to interact with external systems like databases, APIs, and computational services. Each tool is uniquely identified and includes metadata describing its schema.
 
@@ -28,10 +28,12 @@ Each tool must include:
 
 - **name**: Unique identifier for the tool _(since 2024-11-05)_
 - **title** (optional): Human-readable display name _(since 2025-06-18)_
-- **description**: Clear description of what the tool does _(since 2024-11-05)_
+- **description** (optional): Clear description of what the tool does _(since 2024-11-05)_
 - **inputSchema**: JSON schema defining the tool's input parameters _(since 2024-11-05)_
 - **outputSchema** (optional): JSON schema defining the tool's output format _(since 2025-06-18)_
 - **annotations** (optional): Additional tool metadata _(since 2025-06-18)_
+- **icons** (optional): UI icon metadata for clients _(since 2025-11-25)_
+- **execution** (optional): Task execution hints such as `taskSupport` _(since 2025-11-25)_
 
 **_Server Compliance Checklist_**
 
@@ -39,6 +41,7 @@ Each tool must include:
 - it should include clear descriptions for tool functionality
 - it should define proper JSON schemas for tool inputs
 - it should support optional output schemas and annotations
+- it should expose optional icons and execution hints when available
 
 ## **Tool Interaction Flow**
 
@@ -62,6 +65,7 @@ Language models can select and invoke tools based on their descriptions and sche
 - it should validate tool inputs against defined schemas
 - it should handle tool invocation requests appropriately
 - it should return structured tool results
+- it should support task-augmented execution when the negotiated capabilities allow it
 
 ## **Tool Results**
 
@@ -75,6 +79,10 @@ Tool results can include multiple content types:
 - **Resource links**: References to external resources _(since 2025-06-18)_
 - **Embedded resources**: Direct resource content _(since 2024-11-05)_
 
+### **Task-backed Results**
+
+When task support is negotiated, `tools/call` may return a task handle instead of immediate content so the caller can poll `tasks/get` and `tasks/result`. This is separate from the normal content block types. _(since 2025-11-25)_
+
 **_Server Compliance Checklist_**
 
 - it should support returning text content in tool results
@@ -82,6 +90,7 @@ Tool results can include multiple content types:
 - it should support returning audio content when applicable
 - it should support resource references in tool results
 - it should handle embedded resource content properly
+- it should return task handles instead of immediate content when async execution is negotiated
 
 ## **Security Considerations**
 

@@ -1,6 +1,6 @@
 # Lifecycle
 
-Protocol Revision: 2025-06-18
+Protocol Revision: 2025-11-25
 
 The Model Context Protocol (MCP) defines a rigorous lifecycle for client-server connections that ensures proper capability negotiation and state management.
 

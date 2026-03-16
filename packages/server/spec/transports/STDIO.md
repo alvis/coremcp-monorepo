@@ -1,6 +1,6 @@
 # **Standard Input/Output Transport**
 
-**Protocol Revision:** 2025-06-18
+**Protocol Revision:** 2025-11-25
 
 The Standard Input/Output (stdio) transport enables Model Context Protocol (MCP) communication between a client and server through standard input/output streams. This transport is designed for simple, lightweight communication where the client launches the server as a subprocess.
 

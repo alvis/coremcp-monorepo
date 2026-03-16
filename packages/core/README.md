@@ -17,10 +17,11 @@ npm i @coremcp/core
 import { Session, MemoryStorage } from '@coremcp/core';
 
 // Complete session management with activity tracking
+// Supported protocol versions: 2024-11-05, 2025-03-26, 2025-06-18, 2025-11-25
 const session = new Session({
   id: 'session-123',
   user: { id: 'user-1', name: 'Alice' },
-  protocolVersion: '2025-06-18',
+  protocolVersion: '2025-11-25',
   // ... other session data
 });
 
@@ -66,10 +67,11 @@ import { Session } from '@coremcp/core';
 import type { User } from './types';
 
 // Create a new session with comprehensive state
+// Also supports older protocol versions: 2024-11-05, 2025-03-26, 2025-06-18
 const session = new Session<User>({
   id: crypto.randomUUID(),
   user: { id: 'user-123', name: 'Alice', role: 'admin' },
-  protocolVersion: '2025-06-18',
+  protocolVersion: '2025-11-25',
   clientInfo: { name: 'MyApp', version: '1.0.0' },
   serverInfo: { name: 'MyMCPServer', version: '2.0.0' },
   capabilities: {
@@ -234,10 +236,11 @@ logger.error('Tool execution failed', error);
 
 ```typescript
 // 1. Session Creation
+// Older protocol versions (2024-11-05, 2025-03-26, 2025-06-18) are also supported
 const session = new Session({
   id: crypto.randomUUID(),
   userId: authenticatedUserId,
-  protocolVersion: '2025-06-18',
+  protocolVersion: '2025-11-25',
   // ... other required fields
 });
 

@@ -1,6 +1,6 @@
 # **HTTP Transport**
 
-**Protocol Revision:** 2025-06-18
+**Protocol Revision:** 2025-11-25
 
 The HTTP transport enables Model Context Protocol (MCP) communication over HTTP connections, supporting both request-response and server-sent event (SSE) streaming patterns. This transport provides flexible, web-compatible communication suitable for distributed systems and web applications.
 
@@ -250,7 +250,7 @@ For local development, servers **SHOULD**:
 Clients **MUST** include the `MCP-Protocol-Version` header after successful initialization:
 
 ```
-MCP-Protocol-Version: 2025-06-18
+MCP-Protocol-Version: 2025-11-25
 ```
 
 Servers **MUST**:
