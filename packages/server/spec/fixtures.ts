@@ -19,8 +19,6 @@ import type {
 
 import type { ConnectionContext } from '#types';
 
-const write = vi.fn();
-
 export const sessionData: SessionData = {
   id: 'test-session',
   userId: null,
@@ -36,13 +34,7 @@ export const sessionData: SessionData = {
   events: [],
 };
 
-export const sessionContext: SessionContext = {
-  channel: {
-    id: 'test-channel',
-    side: 'server',
-    write,
-  },
-};
+export const sessionContext: SessionContext = {};
 
 const controller = new AbortController();
 export const abort: AbortSignal = controller.signal;

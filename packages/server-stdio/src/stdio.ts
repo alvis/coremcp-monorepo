@@ -101,8 +101,16 @@ export class McpStdioServerTransport extends ServerTransport {
       try {
         await this.server.handleMessage(message, context, {
           onInitialize: (session) => {
-            // update the session id such that it can be used for the next message
             context.sessionId = session.id;
+            session.addListener((event) => {
+              if (
+                event.type === 'server-message' &&
+                !event.responseToRequestId &&
+                event.channelId !== context.channelId
+              ) {
+                void context.write(event.message);
+              }
+            });
           },
         });
       } catch (exception) {

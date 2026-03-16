@@ -56,19 +56,23 @@ export function createErrorMessageEnvelope(
  * handles errors that occur during message processing
  *
  * logs the error details and sends a json-rpc error response to the client.
- * @param context error context containing exception, message, session, and logger
+ * @param context error context containing exception, message, session, write function, channel id, and logger
  * @param context.exception the error that occurred
  * @param context.message the json-rpc message being processed
  * @param context.session the current session
+ * @param context.write function to write the error response to the transport
+ * @param context.channelId channel identifier for event recording
  * @param context.log optional logger for error reporting
  */
 export async function handleMessageError(context: {
   exception: unknown;
   message: JsonRpcMessage;
   session: Session;
+  write: (msg: JsonRpcMessage) => Promise<void>;
+  channelId: string;
   log?: Log;
 }): Promise<void> {
-  const { message, exception, session, log } = context;
+  const { message, exception, session, write, channelId, log } = context;
 
   log?.('error', `failed to handle JSON-RPC message`, {
     id: message.id,
@@ -78,7 +82,13 @@ export async function handleMessageError(context: {
 
   const errorMessage = createErrorMessageEnvelope(message.id, exception);
 
-  await session.reply(errorMessage);
+  await write(errorMessage);
+  await session.addEvent({
+    type: 'server-message',
+    channelId,
+    responseToRequestId: errorMessage.id,
+    message: errorMessage,
+  });
 }
 
 /**

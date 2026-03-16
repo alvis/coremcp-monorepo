@@ -210,7 +210,6 @@ export class McpServer {
     void this.#sessionStorage?.set(data);
 
     const session = new Session(data, {
-      channel: { id: context.channelId, side: 'server', write: context.write },
       store: this.#sessionStorage,
       hooks: {
         // subscription management //
@@ -235,7 +234,10 @@ export class McpServer {
     this.#activeSessions.set(session.id, session);
 
     // upsert the session
-    await session.addEvent({ type: 'channel-started' });
+    await session.addEvent({
+      type: 'channel-started',
+      channelId: context.channelId,
+    });
 
     this.#log?.('info', `client session initialized successfully`, {
       protocolVersion: session.protocolVersion,
@@ -280,7 +282,12 @@ export class McpServer {
         /* istanbul ignore next - onInitialize callback is optional and tested separately */
         options?.onInitialize?.(session);
 
-        return await this.handleRequestMessage(message, session);
+        return await this.handleRequestMessage({
+          message,
+          session,
+          write: context.write,
+          channelId: context.channelId,
+        });
       }
 
       // OTHER CASES //
@@ -308,7 +315,12 @@ export class McpServer {
       }
 
       return message.id !== undefined
-        ? await this.handleRequestMessage(message, session)
+        ? await this.handleRequestMessage({
+            message,
+            session,
+            write: context.write,
+            channelId: context.channelId,
+          })
         : await this.handleNotificationMessage(message, session);
     } catch (exception) {
       // errors from validateInitializeRequest, initializeSession, or resumeSession
@@ -349,7 +361,10 @@ export class McpServer {
       // record the channel closure without removing the session from
       // active sessions so that subsequent POST requests can still
       // find the session via resumeSession
-      await session.addEvent({ type: 'channel-ended' });
+      await session.addEvent({
+        type: 'channel-ended',
+        channelId: context.channelId,
+      });
     });
 
     /* istanbul ignore next */
@@ -392,49 +407,69 @@ export class McpServer {
 
   /**
    * handles incoming json-rpc request messages by routing them to appropriate handlers
-   * @param message json-rpc request or notification envelope
-   * @param session current client session
-   * @returns handler result data
-   * @throws {JsonRpcError} when method is not found
+   * @param context request context containing message, session, write function, and channel id
+   * @param context.message
+   * @param context.session
+   * @param context.write
+   * @param context.channelId
    */
-  public async handleRequestMessage(
-    message: JsonRpcRequestEnvelope,
-    session: Session,
-  ): Promise<void> {
+  public async handleRequestMessage(context: {
+    message: JsonRpcRequestEnvelope;
+    session: Session;
+    write: (msg: JsonRpcMessage) => Promise<void>;
+    channelId: string;
+  }): Promise<void> {
+    const { message, session, write, channelId } = context;
+
     this.#log?.('debug', `processing JSON-RPC request: ${message.method}`, {
       messageId: message.id,
       messageMethod: message.method,
     });
-    await session.addEvent({ type: 'client-message', message });
-
-    const validators = await getVersionedValidators(session.protocolVersion);
-
-    // lookup method configuration from registry
-    const handle = this.#handlers[methodToHandlerMap[message.method] ?? ''];
-    const verify = validators.requests[message.method];
-
-    if (!(handle && verify)) {
-      throw new JsonRpcError({
-        code: MCP_ERROR_CODES.METHOD_NOT_FOUND,
-        message: `Unknown request: ${message.method}`,
-      });
-    }
-
-    const { params } = validateRequest(verify, message);
+    await session.addEvent({ type: 'client-message', channelId, message });
 
     const { signal: abort } = session.startRequest(message.id, message);
 
     try {
+      const validators = await getVersionedValidators(session.protocolVersion);
+      const handle = this.#handlers[methodToHandlerMap[message.method] ?? ''];
+      const verify = validators.requests[message.method];
+
+      if (!(handle && verify)) {
+        throw new JsonRpcError({
+          code: MCP_ERROR_CODES.METHOD_NOT_FOUND,
+          message: `Unknown request: ${message.method}`,
+        });
+      }
+
+      const { params } = validateRequest(verify, message);
       const result = await handle(params, { abort, session });
 
-      await session.reply({ id: message.id, result });
+      const responseMessage: JsonRpcMessage = {
+        jsonrpc: JSONRPC_VERSION,
+        id: message.id,
+        result,
+      };
+      await write(responseMessage);
+      await session.addEvent({
+        type: 'server-message',
+        channelId,
+        responseToRequestId: responseMessage.id,
+        message: responseMessage,
+      });
 
       this.#log?.('debug', `JSON-RPC request completed: ${message.method}`, {
         messageId: message.id,
         messageMethod: message.method,
       });
     } catch (exception) {
-      await handleMessageError({ message, exception, session, log: this.#log });
+      await handleMessageError({
+        message,
+        exception,
+        session,
+        log: this.#log,
+        write,
+        channelId,
+      });
     } finally {
       session.endRequest(message.id);
     }

@@ -1,14 +1,22 @@
 import type { Session } from '@coremcp/core';
 import type {
+  CancelTaskRequest,
+  CancelTaskResult,
   CallToolRequest,
   CallToolResult,
   CompleteRequest,
   CompleteResult,
+  GetTaskPayloadRequest,
+  GetTaskPayloadResult,
+  GetTaskRequest,
+  GetTaskResult,
   GetPromptRequest,
   GetPromptResult,
   InitializeRequest,
   InitializeResult,
   JsonRpcResultData,
+  ListTasksRequest,
+  ListTasksResult,
   ListPromptsRequest,
   ListPromptsResult,
   ListResourcesRequest,
@@ -134,6 +142,30 @@ export type CallTool = (
   context: RequestContext,
 ) => Promise<CallToolResult>;
 
+/** handles requests to retrieve task state */
+export type GetTask = (
+  params: GetTaskRequest['params'],
+  context: RequestContext,
+) => Promise<GetTaskResult>;
+
+/** handles requests to retrieve completed task payloads */
+export type GetTaskResultPayload = (
+  params: GetTaskPayloadRequest['params'],
+  context: RequestContext,
+) => Promise<GetTaskPayloadResult>;
+
+/** handles requests to list tasks */
+export type ListTasks = (
+  params: ListTasksRequest['params'],
+  context: RequestContext,
+) => Promise<ListTasksResult>;
+
+/** handles requests to cancel tasks */
+export type CancelTask = (
+  params: CancelTaskRequest['params'],
+  context: RequestContext,
+) => Promise<CancelTaskResult>;
+
 /**
  * handles requests for argument completion
  * @param params request parameters including completion details
@@ -170,6 +202,10 @@ export interface ServerRequestHandler {
   getPrompt: GetPrompt;
   listTools: ListTools;
   callTool: CallTool;
+  getTask?: GetTask;
+  getTaskResult?: GetTaskResultPayload;
+  listTasks?: ListTasks;
+  cancelTask?: CancelTask;
   complete: Complete;
   setLevel: SetLevel;
   [method: string]:

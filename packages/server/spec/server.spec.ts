@@ -373,10 +373,24 @@ describe('cl:McpServer', () => {
   });
 
   describe('mt:handleRequestMessage', () => {
-    it('should throw for unknown request method', async () => {
-      await expect(
-        baseServer.handleRequestMessage(unknownMethodMessage, session),
-      ).rejects.toThrow('Unknown request');
+    it('should route error response for unknown request method', async () => {
+      const writeSpy = vi.fn<(msg: import('@coremcp/protocol').JsonRpcMessage) => Promise<void>>();
+
+      await baseServer.handleRequestMessage({
+        message: unknownMethodMessage,
+        session,
+        write: writeSpy,
+        channelId: 'test-channel',
+      });
+
+      expect(writeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: unknownMethodMessage.id,
+          error: expect.objectContaining({
+            message: expect.stringContaining('Unknown request'),
+          }),
+        }),
+      );
     });
   });
 
@@ -428,10 +442,12 @@ describe('cl:McpServer', () => {
       };
 
       // start the request but don't await it
-      const toolCallPromise = baseServer.handleRequestMessage(
-        toolCallMessage,
+      const toolCallPromise = baseServer.handleRequestMessage({
+        message: toolCallMessage,
         session,
-      );
+        write: connectionContext.write,
+        channelId: connectionContext.channelId,
+      });
 
       // advance timers to let the request start
       await vi.advanceTimersByTimeAsync(100);
@@ -450,18 +466,14 @@ describe('cl:McpServer', () => {
     });
 
     it('should handle unknown notification gracefully', async () => {
-      // handleNotificationMessage catches errors and sends them via session.reply
-      // errors from unknown notifications are converted to Internal Error
-      const mockReply = vi.fn();
-      const testSession = { ...session, reply: mockReply };
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await baseServer.handleNotificationMessage(
         unknownNotificationMessage,
-        testSession as unknown as Session,
+        session,
       );
 
-      // verify error was sent as response
-      expect(mockReply).toHaveBeenCalledWith(
+      expect(notifySpy).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
             code: expect.any(Number),
@@ -469,39 +481,41 @@ describe('cl:McpServer', () => {
           }),
         }),
       );
+
+      notifySpy.mockRestore();
     });
 
     it('should handle notification with malformed message', async () => {
       const malformedMessage: JsonRpcNotificationEnvelope =
         malformedCancelledNotificationMessage as JsonRpcNotificationEnvelope;
 
-      const mockReply = vi.fn();
-      const testSession = { ...session, reply: mockReply };
+      const notifySpy = vi.spyOn(session, 'notify');
 
       await baseServer.handleNotificationMessage(
         malformedMessage,
-        testSession as unknown as Session,
+        session,
       );
 
-      // verify error was sent as response
-      expect(mockReply).toHaveBeenCalled();
+      expect(notifySpy).toHaveBeenCalled();
+
+      notifySpy.mockRestore();
     });
 
     it('should handle unknown notification method in handleNotificationMessage', async () => {
-      const mockReply = vi.fn();
-      const testSession = { ...testSessionForNotification, reply: mockReply };
+      const notifySpy = vi.spyOn(testSessionForNotification, 'notify');
 
       await baseServer.handleNotificationMessage(
         unknownNotificationMessage,
-        testSession as unknown as Session,
+        testSessionForNotification,
       );
 
-      // verify error was sent as response
-      expect(mockReply).toHaveBeenCalledWith(
+      expect(notifySpy).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.any(Object),
         }),
       );
+
+      notifySpy.mockRestore();
     });
   });
 
@@ -518,22 +532,16 @@ describe('cl:McpServer', () => {
 
     it('should notify subscribers of resource update', async () => {
       // initialize sessions for each user
-      const send1 = vi.fn<ConnectionContext['write']>();
       const session1 = await baseServer.initializeSession(basicInitParams, {
         ...connectionContext,
-        write: send1,
       });
 
-      const send2 = vi.fn<ConnectionContext['write']>();
       const session2 = await baseServer.initializeSession(basicInitParams, {
         ...connectionContext,
-        write: send2,
       });
 
-      const send3 = vi.fn<ConnectionContext['write']>();
       const session3 = await baseServer.initializeSession(basicInitParams, {
         ...connectionContext,
-        write: send3,
       });
 
       // each user submits a subscription request for the same resource
@@ -541,29 +549,35 @@ describe('cl:McpServer', () => {
       session2.subscribeResource('test://resource');
       session3.subscribeResource('test://resource');
 
-      // pretend user 3 now subscribe from the resource
+      // pretend user 3 now unsubscribes from the resource
       session3.unsubscribeResource('test://resource');
+
+      const notifySpy1 = vi.spyOn(session1, 'notify');
+      const notifySpy2 = vi.spyOn(session2, 'notify');
+      const notifySpy3 = vi.spyOn(session3, 'notify');
 
       await baseServer.notifyResourceUpdate('test://resource');
 
-      // verify all 3 sessions received the notification
-      expect(send1).toHaveBeenCalledWith({
-        jsonrpc: JSONRPC_VERSION,
+      // verify subscribed sessions received the notification
+      expect(notifySpy1).toHaveBeenCalledWith({
         method: 'notifications/resources/updated',
         params: { uri: 'test://resource' },
       });
 
-      expect(send2).toHaveBeenCalledWith({
-        jsonrpc: JSONRPC_VERSION,
+      expect(notifySpy2).toHaveBeenCalledWith({
         method: 'notifications/resources/updated',
         params: { uri: 'test://resource' },
       });
 
-      expect(send3).not.toHaveBeenCalledWith({
-        jsonrpc: JSONRPC_VERSION,
+      // session3 unsubscribed so should not be notified
+      expect(notifySpy3).not.toHaveBeenCalledWith({
         method: 'notifications/resources/updated',
         params: { uri: 'test://resource' },
       });
+
+      notifySpy1.mockRestore();
+      notifySpy2.mockRestore();
+      notifySpy3.mockRestore();
     });
   });
 
@@ -577,17 +591,17 @@ describe('cl:McpServer', () => {
       );
       sessionResult.subscribeResource('test://resource');
 
-      const notifyMock = vi.fn();
-      sessionResult.reply = notifyMock;
+      const notifySpy = vi.spyOn(sessionResult, 'notify');
 
       await server.pauseSession(sessionResult);
       await server.notifyResourceUpdate('test://resource');
 
-      expect(notifyMock).not.toHaveBeenCalledWith({
-        jsonrpc: JSONRPC_VERSION,
+      expect(notifySpy).not.toHaveBeenCalledWith({
         method: 'notifications/resources/updated',
         params: { uri: 'test://resource' },
       });
+
+      notifySpy.mockRestore();
     });
 
     it('should handle pauseSession', async () => {
@@ -641,9 +655,10 @@ describe('cl:McpServer', () => {
       expect(dropSession).toHaveBeenCalledWith(sessionResult.id);
 
       // verify subscriptions were cleaned up by trying to notify
-      sessionResult.reply = vi.fn();
+      const notifySpy = vi.spyOn(sessionResult, 'notify');
       await baseServer.notifyResourceUpdate('test://resource1');
-      expect(sessionResult.reply).not.toHaveBeenCalled();
+      expect(notifySpy).not.toHaveBeenCalled();
+      notifySpy.mockRestore();
     });
 
     it('should throw NOT_FOUND when session does not exist', async () => {
@@ -757,19 +772,19 @@ describe('cl:McpServer', () => {
       sessionResult.subscribeResource('test://resource');
 
       // verify subscription works
-      const notifyMock1 = vi.fn();
-      sessionResult.reply = notifyMock1;
+      const notifySpy1 = vi.spyOn(sessionResult, 'notify');
       await baseServer.notifyResourceUpdate('test://resource');
-      expect(notifyMock1).toHaveBeenCalled();
+      expect(notifySpy1).toHaveBeenCalled();
+      notifySpy1.mockRestore();
 
       // unsubscribe from the resource
       sessionResult.unsubscribeResource('test://resource');
 
       // verify no notifications are sent after unsubscribe
-      const notifyMock2 = vi.fn();
-      sessionResult.reply = notifyMock2;
+      const notifySpy2 = vi.spyOn(sessionResult, 'notify');
       await baseServer.notifyResourceUpdate('test://resource');
-      expect(notifyMock2).not.toHaveBeenCalled();
+      expect(notifySpy2).not.toHaveBeenCalled();
+      notifySpy2.mockRestore();
     });
 
     it('should delete subscription entry when last subscriber unsubscribes', async () => {
@@ -795,18 +810,18 @@ describe('cl:McpServer', () => {
       session1.unsubscribeResource('test://resource');
 
       // second session should still receive notifications
-      const notify2Mock = vi.fn();
-      session2.reply = notify2Mock;
+      const notify2Spy = vi.spyOn(session2, 'notify');
       await server.notifyResourceUpdate('test://resource');
-      expect(notify2Mock).toHaveBeenCalled();
+      expect(notify2Spy).toHaveBeenCalled();
+      notify2Spy.mockRestore();
 
       // unsubscribe second session (last subscriber)
       session2.unsubscribeResource('test://resource');
 
-      const notify2Mock2 = vi.fn();
-      session2.reply = notify2Mock2;
+      const notify2Spy2 = vi.spyOn(session2, 'notify');
       await server.notifyResourceUpdate('test://resource');
-      expect(notify2Mock2).not.toHaveBeenCalled();
+      expect(notify2Spy2).not.toHaveBeenCalled();
+      notify2Spy2.mockRestore();
     });
 
     it('should properly clean up subscriptions data structure when unsubscribing', async () => {
@@ -822,19 +837,19 @@ describe('cl:McpServer', () => {
       session1.subscribeResource('test://cleanup-resource');
 
       // verify subscription exists by checking notification
-      const notifyMock = vi.fn();
-      session1.reply = notifyMock;
+      const notifySpy = vi.spyOn(session1, 'notify');
       await server.notifyResourceUpdate('test://cleanup-resource');
-      expect(notifyMock).toHaveBeenCalled();
+      expect(notifySpy).toHaveBeenCalled();
+      notifySpy.mockRestore();
 
       // unsubscribe (this should trigger cleanup of empty subscription entry)
       session1.unsubscribeResource('test://cleanup-resource');
 
       // verify cleanup worked by ensuring no notification is sent
-      const notifyMock2 = vi.fn();
-      session1.reply = notifyMock2;
+      const notifySpy2 = vi.spyOn(session1, 'notify');
       await server.notifyResourceUpdate('test://cleanup-resource');
-      expect(notifyMock2).not.toHaveBeenCalled();
+      expect(notifySpy2).not.toHaveBeenCalled();
+      notifySpy2.mockRestore();
     });
   });
 
@@ -1004,10 +1019,10 @@ describe('cl:McpServer', () => {
         channelId: 'test-channel-1',
         recordedAt: sixMinutesAgo,
       });
-      const notifyMockBefore = vi.fn();
-      sessionWithSub.reply = notifyMockBefore;
+      const notifySpyBefore = vi.spyOn(sessionWithSub, 'notify');
       await server.notifyResourceUpdate('test://resource');
-      expect(notifyMockBefore).toHaveBeenCalled();
+      expect(notifySpyBefore).toHaveBeenCalled();
+      notifySpyBefore.mockRestore();
 
       const count = server.cleanupInactiveSessions(0);
 
@@ -1018,10 +1033,10 @@ describe('cl:McpServer', () => {
         ...contextWithSession1Named,
         sessionId: 'new-session',
       });
-      const notifyMockAfter = vi.fn();
-      newSession.reply = notifyMockAfter;
+      const notifySpyAfter = vi.spyOn(newSession, 'notify');
       await server.notifyResourceUpdate('test://resource');
-      expect(notifyMockAfter).not.toHaveBeenCalled();
+      expect(notifySpyAfter).not.toHaveBeenCalled();
+      notifySpyAfter.mockRestore();
     });
 
     it('should drop session from storage', async () => {
@@ -1520,7 +1535,7 @@ describe('cl:McpServer', () => {
       expect(resumeContext.write).not.toHaveBeenCalled();
     });
 
-    it('should exercise active session write function when resuming and sending notification', async () => {
+    it('should exercise active session notify when resuming and sending notification', async () => {
       const server = new McpServer({
         serverInfo: basicServerInfo,
         sessionStore,
@@ -1533,14 +1548,13 @@ describe('cl:McpServer', () => {
 
       session.subscribeResource('test://notification-resource');
 
-      const mockWrite = vi.fn();
       const resumeContext: ConnectionContext = {
         channelId: 'new-channel',
         sessionId: session.id,
         transport: 'sse',
         abortSignal: new AbortController().signal,
         waitUntilClosed: new Promise(() => {}),
-        write: mockWrite,
+        write: vi.fn(),
         userId: 'user-1',
       };
 
@@ -1553,14 +1567,15 @@ describe('cl:McpServer', () => {
 
       await server.handleMessage(requestMessage, resumeContext);
 
+      const notifySpy = vi.spyOn(session, 'notify');
       await server.notifyResourceUpdate('test://notification-resource');
 
-      expect(mockWrite).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'notifications/resources/updated',
-          params: { uri: 'test://notification-resource' },
-        }),
-      );
+      expect(notifySpy).toHaveBeenCalledWith({
+        method: 'notifications/resources/updated',
+        params: { uri: 'test://notification-resource' },
+      });
+
+      notifySpy.mockRestore();
     });
 
     it('should exercise stored session write function and hooks when resuming', async () => {
@@ -1960,44 +1975,39 @@ describe('cl:McpServer', () => {
       ).rejects.toThrow('Session ID is required');
     });
 
-    it('should handle unknown notification method and write error (line 629)', async () => {
+    it('should handle unknown notification method and notify error', async () => {
       const server = new McpServer({
         serverInfo: basicServerInfo,
         sessionStore,
       });
 
-      // Initialize a session first
       const session = await server.initializeSession(
         basicInitParams,
         connectionContext,
       );
 
-      // Create mock write function to capture error response
-      const mockWrite = vi.fn();
+      const notifySpy = vi.spyOn(session, 'notify');
 
-      // Create context with the session
       const contextWithSession: ConnectionContext = {
         ...connectionContext,
         sessionId: session.id,
-        write: mockWrite,
       };
 
-      // Send unknown notification - should not throw but write error
       await server.handleMessage(
         unknownNotificationMessage,
         contextWithSession,
       );
 
-      // Verify error was written
-      expect(mockWrite).toHaveBeenCalledWith(
+      expect(notifySpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          jsonrpc: JSONRPC_VERSION,
           error: expect.objectContaining({
             code: expect.any(Number),
             message: expect.stringContaining('Unknown notification'),
           }),
         }),
       );
+
+      notifySpy.mockRestore();
     });
   });
 });

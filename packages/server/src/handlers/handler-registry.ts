@@ -31,6 +31,10 @@ export const methodToHandlerMap: Record<
   'prompts/get': 'getPrompt',
   'tools/list': 'listTools',
   'tools/call': 'callTool',
+  'tasks/get': 'getTask',
+  'tasks/result': 'getTaskResult',
+  'tasks/list': 'listTasks',
+  'tasks/cancel': 'cancelTask',
   'completion/complete': 'complete',
   'logging/setLevel': 'setLevel',
 };
@@ -57,5 +61,9 @@ export function resolveHandlers(
     setLevel: handlers.setLevel ?? handleSetLevel,
     subscribe: handlers.subscribe ?? handleSubscribe,
     unsubscribe: handlers.unsubscribe ?? handleUnsubscribe,
+    getTask: handlers.getTask,
+    getTaskResult: handlers.getTaskResult,
+    listTasks: handlers.listTasks,
+    cancelTask: handlers.cancelTask,
   };
 }

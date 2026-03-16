@@ -39,8 +39,7 @@ export function streamSessionNotifications(
 
   const unsubscribeSession = session.addListener(
     (event: SessionEvent): void => {
-      // skip events that originated from this channel because
-      // session.reply() already wrote them via session.channel.write()
+      // skip response events and events that originated from this channel
       if (
         event.type === 'server-message' &&
         !event.responseToRequestId &&

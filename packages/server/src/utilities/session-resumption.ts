@@ -66,16 +66,6 @@ export async function resumeSession(
     // verify user authorization (if session has userId)
     validateSessionOwnership(activeSession.userId, connectionContext.userId);
 
-    // update channel context for this connection
-    activeSession.channel = {
-      id: connectionContext.channelId,
-      side: 'server',
-      write: async (notification) => connectionContext.write(notification),
-    };
-
-    // NOTE: do not add 'channel-started' event for active sessions
-    // as the channel is already active and this is just updating the write function
-
     return activeSession;
   }
 
@@ -87,11 +77,6 @@ export async function resumeSession(
   );
 
   const session = new Session(storedSession, {
-    channel: {
-      id: connectionContext.channelId,
-      side: 'server',
-      write: async (notification) => connectionContext.write(notification),
-    },
     store: sessionStorage,
     hooks: {
       onSubscribe: (uri) => subscribeToResource(subscriptions, uri, session.id),
@@ -100,7 +85,7 @@ export async function resumeSession(
     },
   });
 
-  await session.addEvent({ type: 'channel-started' });
+  await session.addEvent({ type: 'channel-started', channelId: connectionContext.channelId });
 
   return session;
 }

@@ -21,10 +21,12 @@ describe('fn:resolveHandlers', () => {
     expect(handlers).toHaveProperty('subscribe');
     expect(handlers).toHaveProperty('unsubscribe');
 
-    // all handlers should be functions
-    Object.values(handlers).forEach((handler) => {
-      expect(typeof handler).toBe('function');
-    });
+    // all mandatory handlers should be functions
+    Object.values(handlers)
+      .filter((handler) => handler !== undefined)
+      .forEach((handler) => {
+        expect(typeof handler).toBe('function');
+      });
   });
 
   it('should return default handlers when empty object provided', () => {
@@ -67,6 +69,34 @@ describe('fn:resolveHandlers', () => {
     expect(typeof handlers.setLevel).toBe('function');
     expect(typeof handlers.subscribe).toBe('function');
     expect(typeof handlers.unsubscribe).toBe('function');
+  });
+
+  it('should pass through task handlers when provided', () => {
+    const customGetTask = vi.fn();
+    const customGetTaskResult = vi.fn();
+    const customListTasks = vi.fn();
+    const customCancelTask = vi.fn();
+
+    const handlers = resolveHandlers({
+      getTask: customGetTask,
+      getTaskResult: customGetTaskResult,
+      listTasks: customListTasks,
+      cancelTask: customCancelTask,
+    });
+
+    expect(handlers.getTask).toBe(customGetTask);
+    expect(handlers.getTaskResult).toBe(customGetTaskResult);
+    expect(handlers.listTasks).toBe(customListTasks);
+    expect(handlers.cancelTask).toBe(customCancelTask);
+  });
+
+  it('should have undefined task handlers when not provided', () => {
+    const handlers = resolveHandlers();
+
+    expect(handlers.getTask).toBeUndefined();
+    expect(handlers.getTaskResult).toBeUndefined();
+    expect(handlers.listTasks).toBeUndefined();
+    expect(handlers.cancelTask).toBeUndefined();
   });
 
   it('should override all handlers when all provided', () => {

@@ -1,9 +1,10 @@
+import { JSONRPC_VERSION } from '@coremcp/protocol';
+
 import { createSessionEvent, recordEvent } from './event-manager';
 import {
   getSortedEventsForRebuilding,
   initializeFromEvents,
 } from './initializer';
-import { createJsonRpcMessage } from './message';
 import { addPrompt, dropPrompt } from './prompt-manager';
 import {
   cancelTracking,
@@ -99,31 +100,16 @@ export class Session {
   #store?: SessionContext['store'];
   #hooks?: SessionContext['hooks'];
 
-  /** current channel context */
-  public channel: SessionContext['channel'];
   /** persists session state to store */
   public save: () => Promise<void>;
-  /** sends a json-rpc message to the client */
-  public reply: (message: Omit<JsonRpcMessage, 'jsonrpc'>) => Promise<void>;
 
   /**
    * creates new mcp session with unique identifier
    * @param data session configuration parameters
-   * @param context session context including store and channel
+   * @param context session context including store
    */
   constructor(data: SessionData, context: SessionContext) {
     this.#store = context.store;
-    this.channel = context.channel;
-    this.reply = async (data) => {
-      const message = createJsonRpcMessage(data);
-      await this.channel.write(message);
-      await this.addEvent({
-        type: 'server-message',
-        channelId: this.channel.id,
-        responseToRequestId: message.id,
-        message,
-      });
-    };
     this.save = async () => context.store?.set(this.toJSON());
     this.#hooks = context.hooks;
     this.#id = data.id;
@@ -282,20 +268,43 @@ export class Session {
    * @param data log message content (string or structured object)
    * @param logger optional name of the component generating the log
    */
-  public async sendLog(level: McpLogLevel, data: JsonifibleValue, logger?: string): Promise<void> {
+  public async sendLog(
+    level: McpLogLevel,
+    data: JsonifibleValue,
+    logger?: string,
+  ): Promise<void> {
     const threshold = this.#logLevel;
 
-    if (threshold !== null && LOG_LEVEL_SEVERITY[level] > LOG_LEVEL_SEVERITY[threshold]) {
+    if (
+      threshold !== null &&
+      LOG_LEVEL_SEVERITY[level] > LOG_LEVEL_SEVERITY[threshold]
+    ) {
       return;
     }
 
-    const params: { level: McpLogLevel; data: JsonifibleValue; logger?: string } = { level, data };
+    const params: {
+      level: McpLogLevel;
+      data: JsonifibleValue;
+      logger?: string;
+    } = { level, data };
 
     if (logger !== undefined) {
       params.logger = logger;
     }
 
-    await this.reply({ method: 'notifications/message', params });
+    await this.notify({ method: 'notifications/message', params });
+  }
+
+  /**
+   * sends a server-initiated notification to the client via listener fan-out
+   * @param data json-rpc message data without the jsonrpc version field
+   */
+  public async notify(data: Omit<JsonRpcMessage, 'jsonrpc'>): Promise<void> {
+    const message = { jsonrpc: JSONRPC_VERSION, ...data } as JsonRpcMessage;
+    await this.addEvent({
+      type: 'server-message',
+      message,
+    });
   }
 
   /** gets the event history for this session */
@@ -465,7 +474,7 @@ export class Session {
     partial: SessionEventInput,
     options?: { skipSave?: boolean },
   ): Promise<void> {
-    const event = createSessionEvent(partial, this.channel.id);
+    const event = createSessionEvent(partial, partial.channelId ?? '');
     recordEvent(
       this.#events,
       this.#requests,
@@ -549,7 +558,7 @@ export class Session {
   #notify(method: string): void {
     this.#timestamps.last = Date.now();
     void this.save();
-    void this.reply({ method });
+    void this.notify({ method });
   }
 
   /**
