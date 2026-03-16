@@ -9,7 +9,7 @@ export type JsonRpcMessage =
   | JsonRpcErrorEnvelope;
 
 /** latest protocol version supported by this implementation */
-export const LATEST_PROTOCOL_VERSION = '2025-06-18';
+export const LATEST_PROTOCOL_VERSION = '2025-11-25';
 
 /** JSON-RPC version identifier */
 export const JSONRPC_VERSION = '2.0';
@@ -17,13 +17,19 @@ export const JSONRPC_VERSION = '2.0';
 /** JSON-RPC request data with optional meta fields */
 export type JsonRpcRequestData = {
   /**
-   * see [specification/2025-06-18/basic/index#general-fields] for notes on _meta usage.
+   * see [specification/2025-11-25/basic/index#general-fields] for notes on _meta usage.
    */
   _meta?: {
+    /* eslint-disable @typescript-eslint/naming-convention */
     /**
      * if specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
      */
-    progressToken?: ProgressToken;
+    'progressToken'?: ProgressToken;
+    /** associates this request with a related task when applicable */
+    'io.modelcontextprotocol/related-task'?: {
+      taskId: string;
+    };
+    /* eslint-enable @typescript-eslint/naming-convention */
   };
   [key: string]: JsonifibleValue;
 };
@@ -31,7 +37,7 @@ export type JsonRpcRequestData = {
 /** JSON-RPC notification data with optional meta fields */
 export type JsonRpcNotificationData<P = {}> = P & {
   /**
-   * see [specification/2025-06-18/basic/index#general-fields] for notes on _meta usage.
+   * see [specification/2025-11-25/basic/index#general-fields] for notes on _meta usage.
    */
   _meta?: JsonifibleObject;
   [key: string]: JsonifibleValue;
@@ -40,7 +46,7 @@ export type JsonRpcNotificationData<P = {}> = P & {
 /** JSON-RPC result data with optional meta fields */
 export type JsonRpcResultData = {
   /**
-   * see [specification/2025-06-18/basic/index#general-fields] for notes on _meta usage.
+   * see [specification/2025-11-25/basic/index#general-fields] for notes on _meta usage.
    */
   _meta?: JsonifibleObject;
   [key: string]: JsonifibleValue;

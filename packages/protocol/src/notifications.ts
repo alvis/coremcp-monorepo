@@ -1,10 +1,11 @@
 /**
  * Notification methods
- * @see https://modelcontextprotocol.io/specification/2024-11-05/basic/notifications
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/basic/notifications
  */
 
 import type { JsonifibleValue } from '#json';
 import type { McpLogLevel, ProgressToken, RequestId } from '#primitives';
+import type { Task } from '#tasks';
 
 /**
  * notification sent by client to server after successful initialization to begin normal operation _(since 2024-11-05)_
@@ -127,4 +128,19 @@ export interface LoggingMessageNotification {
     /** optional name of the component that generated this log */
     logger?: string;
   };
+}
+
+/** notification from server informing client that an out-of-band elicitation completed _(since 2025-11-25)_ */
+export interface ElicitationCompleteNotification {
+  method: 'notifications/elicitation/complete';
+  params: {
+    /** opaque identifier for the completed elicitation */
+    elicitationId: string;
+  };
+}
+
+/** notification informing the requester that task status changed _(since 2025-11-25)_ */
+export interface TaskStatusNotification {
+  method: 'notifications/tasks/status';
+  params: Task;
 }

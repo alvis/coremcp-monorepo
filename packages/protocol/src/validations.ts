@@ -22,6 +22,7 @@ import type {
 import type { SetLevelRequest } from '#logging';
 import type {
   CancelledNotification,
+  ElicitationCompleteNotification,
   InitializedNotification,
   LoggingMessageNotification,
   ProgressNotification,
@@ -29,6 +30,7 @@ import type {
   ResourceListChangedNotification,
   ResourceUpdatedNotification,
   RootsListChangedNotification,
+  TaskStatusNotification,
   ToolListChangedNotification,
 } from '#notifications';
 import type {
@@ -49,6 +51,16 @@ import type {
 } from '#resources';
 import type { ListRootsRequest, ListRootsResult } from '#roots';
 import type { CreateMessageRequest, CreateMessageResult } from '#sampling';
+import type {
+  CancelTaskRequest,
+  CancelTaskResult,
+  GetTaskPayloadRequest,
+  GetTaskPayloadResult,
+  GetTaskRequest,
+  GetTaskResult,
+  ListTasksRequest,
+  ListTasksResult,
+} from '#tasks';
 import type {
   CallToolRequest,
   CallToolResult,
@@ -78,6 +90,10 @@ interface RequestValidator {
   'logging/setLevel': MessageValidator<SetLevelRequest>;
   'resources/subscribe': MessageValidator<SubscribeRequest>;
   'resources/unsubscribe': MessageValidator<UnsubscribeRequest>;
+  'tasks/get': MessageValidator<GetTaskRequest>;
+  'tasks/result': MessageValidator<GetTaskPayloadRequest>;
+  'tasks/list': MessageValidator<ListTasksRequest>;
+  'tasks/cancel': MessageValidator<CancelTaskRequest>;
   [method: string]: MessageValidator<JsonRpcRequestData> | undefined;
 }
 
@@ -95,6 +111,10 @@ interface ResultValidator {
   'roots/list': MessageValidator<ListRootsResult>;
   'tools/list': MessageValidator<ListToolsResult>;
   'resources/read': MessageValidator<ReadResourceResult>;
+  'tasks/get': MessageValidator<GetTaskResult>;
+  'tasks/result': MessageValidator<GetTaskPayloadResult>;
+  'tasks/list': MessageValidator<ListTasksResult>;
+  'tasks/cancel': MessageValidator<CancelTaskResult>;
   [method: string]: MessageValidator<JsonRpcResultData> | undefined;
 }
 
@@ -109,6 +129,8 @@ interface NotificationValidator {
   'notifications/resources/updated': MessageValidator<ResourceUpdatedNotification>;
   'notifications/roots/list_changed': MessageValidator<RootsListChangedNotification>;
   'notifications/tools/list_changed': MessageValidator<ToolListChangedNotification>;
+  'notifications/elicitation/complete': MessageValidator<ElicitationCompleteNotification>;
+  'notifications/tasks/status': MessageValidator<TaskStatusNotification>;
 
   [method: string]:
     | MessageValidator<{
@@ -190,11 +212,43 @@ export async function getVersionedValidators(
     allowUnionTypes: true, // Allow union types in JSON schema
   });
 
-  return {
+  const validators = {
     requests: createRequestValidators(ajv, negotiated),
     results: createResultValidators(ajv, negotiated),
     notifications: createNotificationValidators(ajv, negotiated),
   };
+
+  return negotiated === '2025-11-25'
+    ? {
+        requests: {
+          ...validators.requests,
+          'initialize': validateInitializeRequest20251125,
+          'tools/call': validateCallToolRequest20251125,
+          'sampling/createMessage': validateCreateMessageRequest20251125,
+          'elicitation/create': validateElicitRequest20251125,
+          'tasks/get': validateGetTaskRequest20251125,
+          'tasks/result': validateGetTaskPayloadRequest20251125,
+          'tasks/list': validateListTasksRequest20251125,
+          'tasks/cancel': validateCancelTaskRequest20251125,
+        },
+        results: {
+          ...validators.results,
+          'initialize': validateInitializeResult20251125,
+          'sampling/createMessage': validateCreateMessageResult20251125,
+          'elicitation/create': validateElicitResult20251125,
+          'tasks/get': validateGetTaskResult20251125,
+          'tasks/result': validateGetTaskPayloadResult20251125,
+          'tasks/list': validateListTasksResult20251125,
+          'tasks/cancel': validateCancelTaskResult20251125,
+        },
+        notifications: {
+          ...validators.notifications,
+          'notifications/elicitation/complete':
+            validateElicitationCompleteNotification20251125,
+          'notifications/tasks/status': validateTaskStatusNotification20251125,
+        },
+      }
+    : validators;
 }
 
 /**
@@ -249,6 +303,22 @@ function createRequestValidators(ajv: Ajv, version: string): RequestValidator {
       createValidator<SubscribeRequest>('SubscribeRequest'),
     'resources/unsubscribe':
       createValidator<UnsubscribeRequest>('UnsubscribeRequest'),
+    'tasks/get': createUnsupportedRequestValidator<GetTaskRequest>(
+      version,
+      'tasks/get',
+    ),
+    'tasks/result': createUnsupportedRequestValidator<GetTaskPayloadRequest>(
+      version,
+      'tasks/result',
+    ),
+    'tasks/list': createUnsupportedRequestValidator<ListTasksRequest>(
+      version,
+      'tasks/list',
+    ),
+    'tasks/cancel': createUnsupportedRequestValidator<CancelTaskRequest>(
+      version,
+      'tasks/cancel',
+    ),
   };
 }
 
@@ -281,6 +351,22 @@ function createResultValidators(ajv: Ajv, version: string): ResultValidator {
     'roots/list': createValidator<ListRootsResult>('ListRootsResult'),
     'tools/list': createValidator<ListToolsResult>('ListToolsResult'),
     'resources/read': createValidator<ReadResourceResult>('ReadResourceResult'),
+    'tasks/get': createUnsupportedResultValidator<GetTaskResult>(
+      version,
+      'tasks/get',
+    ),
+    'tasks/result': createUnsupportedResultValidator<GetTaskPayloadResult>(
+      version,
+      'tasks/result',
+    ),
+    'tasks/list': createUnsupportedResultValidator<ListTasksResult>(
+      version,
+      'tasks/list',
+    ),
+    'tasks/cancel': createUnsupportedResultValidator<CancelTaskResult>(
+      version,
+      'tasks/cancel',
+    ),
   };
 }
 
@@ -330,5 +416,299 @@ function createNotificationValidators(
       createValidator<ToolListChangedNotification>(
         'ToolListChangedNotification',
       ),
+    'notifications/elicitation/complete':
+      createUnsupportedNotificationValidator<ElicitationCompleteNotification>(
+        version,
+        'notifications/elicitation/complete',
+      ),
+    'notifications/tasks/status':
+      createUnsupportedNotificationValidator<TaskStatusNotification>(
+        version,
+        'notifications/tasks/status',
+      ),
   };
 }
+
+function createUnsupportedRequestValidator<M>(
+  version: string,
+  method: string,
+): MessageValidator<M> {
+  return () => {
+    throw new Error(`Message type ${method} isn't supported in v${version}`);
+  };
+}
+
+function createUnsupportedResultValidator<M>(
+  version: string,
+  method: string,
+): MessageValidator<M> {
+  return () => {
+    throw new Error(`Message type ${method} isn't supported in v${version}`);
+  };
+}
+
+function createUnsupportedNotificationValidator<M>(
+  version: string,
+  method: string,
+): MessageValidator<M> {
+  return () => {
+    throw new Error(`Message type ${method} isn't supported in v${version}`);
+  };
+}
+
+function assertObject(
+  value: unknown,
+  name: string,
+): asserts value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`Validation error for ${name}: must be an object`);
+  }
+}
+
+function assertString(value: unknown, name: string): asserts value is string {
+  if (typeof value !== 'string') {
+    throw new Error(`Validation error for ${name}: must be a string`);
+  }
+}
+
+function assertNumber(value: unknown, name: string): asserts value is number {
+  if (typeof value !== 'number') {
+    throw new Error(`Validation error for ${name}: must be a number`);
+  }
+}
+
+function assertTaskShape(task: unknown, name: string): void {
+  assertObject(task, name);
+  assertString(task.taskId, `${name}.taskId`);
+  assertString(task.status, `${name}.status`);
+  assertString(task.createdAt, `${name}.createdAt`);
+  assertString(task.lastUpdatedAt, `${name}.lastUpdatedAt`);
+
+  if (task.ttl !== null && typeof task.ttl !== 'number') {
+    throw new Error(`Validation error for ${name}.ttl: must be a number|null`);
+  }
+}
+
+/** wraps a validation callback in a MessageValidator that casts via unconstrained generic after validation passes */
+function createAssertionValidator<M>(
+  validate: (message: JsonRpcMessage) => void,
+): MessageValidator<M> {
+  return (message: JsonRpcMessage): M => {
+    validate(message);
+
+    return message as M;
+  };
+}
+
+const validateInitializeRequest20251125 =
+  createAssertionValidator<InitializeRequest>((message) => {
+    assertObject(message, 'InitializeRequest');
+    if (message.method !== 'initialize') {
+      throw new Error('Validation error for InitializeRequest: wrong method');
+    }
+    assertObject(message.params, 'InitializeRequest.params');
+    assertString(
+      message.params.protocolVersion,
+      'InitializeRequest.params.protocolVersion',
+    );
+    assertObject(
+      message.params.clientInfo,
+      'InitializeRequest.params.clientInfo',
+    );
+    assertString(
+      message.params.clientInfo.name,
+      'InitializeRequest.params.clientInfo.name',
+    );
+    assertString(
+      message.params.clientInfo.version,
+      'InitializeRequest.params.clientInfo.version',
+    );
+  });
+
+const validateInitializeResult20251125 =
+  createAssertionValidator<InitializeResult>((message) => {
+    assertObject(message.result, 'InitializeResult');
+    assertString(
+      message.result.protocolVersion,
+      'InitializeResult.protocolVersion',
+    );
+    assertObject(message.result.serverInfo, 'InitializeResult.serverInfo');
+    assertString(
+      message.result.serverInfo.name,
+      'InitializeResult.serverInfo.name',
+    );
+    assertString(
+      message.result.serverInfo.version,
+      'InitializeResult.serverInfo.version',
+    );
+  });
+
+const validateCallToolRequest20251125 =
+  createAssertionValidator<CallToolRequest>((message) => {
+    assertObject(message, 'CallToolRequest');
+    if (message.method !== 'tools/call') {
+      throw new Error('Validation error for CallToolRequest: wrong method');
+    }
+    assertObject(message.params, 'CallToolRequest.params');
+    assertString(message.params.name, 'CallToolRequest.params.name');
+  });
+
+const validateCreateMessageRequest20251125 =
+  createAssertionValidator<CreateMessageRequest>((message) => {
+    assertObject(message, 'CreateMessageRequest');
+    if (message.method !== 'sampling/createMessage') {
+      throw new Error(
+        'Validation error for CreateMessageRequest: wrong method',
+      );
+    }
+    assertObject(message.params, 'CreateMessageRequest.params');
+    if (!Array.isArray(message.params.messages)) {
+      throw new Error(
+        'Validation error for CreateMessageRequest.params.messages: must be an array',
+      );
+    }
+    assertNumber(
+      message.params.maxTokens,
+      'CreateMessageRequest.params.maxTokens',
+    );
+  });
+
+const validateCreateMessageResult20251125 =
+  createAssertionValidator<CreateMessageResult>((message) => {
+    assertObject(message.result, 'CreateMessageResult');
+    assertString(message.result.model, 'CreateMessageResult.model');
+    assertString(message.result.role, 'CreateMessageResult.role');
+
+    if (!('content' in message.result)) {
+      throw new Error(
+        'Validation error for CreateMessageResult.content: missing',
+      );
+    }
+  });
+
+const validateElicitRequest20251125 = createAssertionValidator<ElicitRequest>(
+  (message) => {
+    assertObject(message, 'ElicitRequest');
+    if (message.method !== 'elicitation/create') {
+      throw new Error('Validation error for ElicitRequest: wrong method');
+    }
+    assertObject(message.params, 'ElicitRequest.params');
+    assertString(message.params.message, 'ElicitRequest.params.message');
+
+    if (message.params.mode === 'url') {
+      assertString(
+        message.params.elicitationId,
+        'ElicitRequest.params.elicitationId',
+      );
+      assertString(message.params.url, 'ElicitRequest.params.url');
+    } else {
+      assertObject(
+        message.params.requestedSchema,
+        'ElicitRequest.params.requestedSchema',
+      );
+    }
+  },
+);
+
+const validateElicitResult20251125 = createAssertionValidator<ElicitResult>(
+  (message) => {
+    assertObject(message.result, 'ElicitResult');
+    assertString(message.result.action, 'ElicitResult.action');
+  },
+);
+
+const validateGetTaskRequest20251125 = createAssertionValidator<GetTaskRequest>(
+  (message) => {
+    assertObject(message, 'GetTaskRequest');
+    if (message.method !== 'tasks/get') {
+      throw new Error('Validation error for GetTaskRequest: wrong method');
+    }
+    assertObject(message.params, 'GetTaskRequest.params');
+    assertString(message.params.taskId, 'GetTaskRequest.params.taskId');
+  },
+);
+
+const validateGetTaskResult20251125 = createAssertionValidator<GetTaskResult>(
+  (message) => {
+    assertTaskShape(message.result, 'GetTaskResult');
+  },
+);
+
+const validateGetTaskPayloadRequest20251125 =
+  createAssertionValidator<GetTaskPayloadRequest>((message) => {
+    assertObject(message, 'GetTaskPayloadRequest');
+    if (message.method !== 'tasks/result') {
+      throw new Error(
+        'Validation error for GetTaskPayloadRequest: wrong method',
+      );
+    }
+    assertObject(message.params, 'GetTaskPayloadRequest.params');
+    assertString(message.params.taskId, 'GetTaskPayloadRequest.params.taskId');
+  });
+
+const validateGetTaskPayloadResult20251125 =
+  createAssertionValidator<GetTaskPayloadResult>((message) => {
+    assertObject(message.result, 'GetTaskPayloadResult');
+  });
+
+const validateListTasksRequest20251125 =
+  createAssertionValidator<ListTasksRequest>((message) => {
+    assertObject(message, 'ListTasksRequest');
+    if (message.method !== 'tasks/list') {
+      throw new Error('Validation error for ListTasksRequest: wrong method');
+    }
+    if (message.params !== undefined) {
+      assertObject(message.params, 'ListTasksRequest.params');
+    }
+  });
+
+const validateListTasksResult20251125 =
+  createAssertionValidator<ListTasksResult>((message) => {
+    assertObject(message.result, 'ListTasksResult');
+    if (!Array.isArray(message.result.tasks)) {
+      throw new Error(
+        'Validation error for ListTasksResult.tasks: must be an array',
+      );
+    }
+  });
+
+const validateCancelTaskRequest20251125 =
+  createAssertionValidator<CancelTaskRequest>((message) => {
+    assertObject(message, 'CancelTaskRequest');
+    if (message.method !== 'tasks/cancel') {
+      throw new Error('Validation error for CancelTaskRequest: wrong method');
+    }
+    assertObject(message.params, 'CancelTaskRequest.params');
+    assertString(message.params.taskId, 'CancelTaskRequest.params.taskId');
+  });
+
+const validateCancelTaskResult20251125 =
+  createAssertionValidator<CancelTaskResult>((message) => {
+    assertTaskShape(message.result, 'CancelTaskResult');
+  });
+
+const validateElicitationCompleteNotification20251125 =
+  createAssertionValidator<ElicitationCompleteNotification>((message) => {
+    assertObject(message, 'ElicitationCompleteNotification');
+    if (message.method !== 'notifications/elicitation/complete') {
+      throw new Error(
+        'Validation error for ElicitationCompleteNotification: wrong method',
+      );
+    }
+    assertObject(message.params, 'ElicitationCompleteNotification.params');
+    assertString(
+      message.params.elicitationId,
+      'ElicitationCompleteNotification.params.elicitationId',
+    );
+  });
+
+const validateTaskStatusNotification20251125 =
+  createAssertionValidator<TaskStatusNotification>((message) => {
+    assertObject(message, 'TaskStatusNotification');
+    if (message.method !== 'notifications/tasks/status') {
+      throw new Error(
+        'Validation error for TaskStatusNotification: wrong method',
+      );
+    }
+    assertTaskShape(message.params, 'TaskStatusNotification.params');
+  });

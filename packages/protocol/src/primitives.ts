@@ -1,14 +1,14 @@
 import type { JSONSchemaType } from 'ajv';
 
-import type { JsonifibleObject, JsonPrimitive, JsonValue } from '#json';
+import type { JsonifibleObject, JsonValue } from '#json';
 
 /** schema type definition for json values */
 export type JsonSchema = JSONSchemaType<JsonValue>;
 
 /**
  * common types and primitives shared across mcp methods
- * based on mcp specification 2025-06-18
- * @see https://modelcontextprotocol.io/specification/2025-06-18/basic
+ * based on mcp specification 2025-11-25
+ * @see https://modelcontextprotocol.io/specification/2025-11-25/basic
  */
 
 /** unique identifier for json-rpc requests and responses _(since 2024-11-05)_ */
@@ -31,6 +31,18 @@ export type McpLogLevel =
   | 'debug';
 
 /** information about an mcp implementation (client or server) _(since 2024-11-05)_ */
+export type Icon = {
+  /** uri pointing at an icon resource or data uri */
+  src: string;
+  /** optional MIME type override */
+  mimeType?: string;
+  /** supported icon sizes in WxH format or "any" */
+  sizes?: string[];
+  /** theme the icon is optimized for */
+  theme?: 'light' | 'dark';
+};
+
+/** information about an mcp implementation (client or server) _(since 2024-11-05)_ */
 export type Implementation = {
   /** programmatic identifier for the implementation */
   name: string;
@@ -38,6 +50,12 @@ export type Implementation = {
   version: string;
   /** human-readable display name for ui contexts _(since 2025-06-18)_ */
   title?: string;
+  /** human-readable description of the implementation _(since 2025-11-25)_ */
+  description?: string;
+  /** optional implementation website URL _(since 2025-11-25)_ */
+  websiteUrl?: string;
+  /** optionally-sized icons for UI display _(since 2025-11-25)_ */
+  icons?: Icon[];
 };
 
 /** metadata hints for clients about how to handle content and data _(since 2024-11-05)_ */
@@ -53,14 +71,40 @@ export type Annotations = {
 /** features and functionality supported by an mcp client _(since 2024-11-05)_ */
 export type ClientCapabilities = {
   /** support for requesting additional user input _(since 2025-06-18)_ */
-  elicitation?: Record<string, never>;
+  elicitation?: {
+    /** support for in-client form based elicitation */
+    form?: Record<string, never>;
+    /** support for URL based elicitation */
+    url?: Record<string, never>;
+  };
   /** filesystem root access capabilities */
   roots?: {
     /** whether client supports notifications when roots list changes */
     listChanged?: boolean;
   };
   /** support for llm sampling and message generation requests */
-  sampling?: Record<string, never>;
+  sampling?: {
+    /** support for includeContext beyond the default "none" */
+    context?: Record<string, never>;
+    /** support for tools and toolChoice in sampling requests */
+    tools?: Record<string, never>;
+  };
+  /** support for task-augmented requests */
+  tasks?: {
+    /** support for tasks/list */
+    list?: Record<string, never>;
+    /** support for tasks/cancel */
+    cancel?: Record<string, never>;
+    /** per-request task augmentation support */
+    requests?: {
+      sampling?: {
+        createMessage?: Record<string, never>;
+      };
+      elicitation?: {
+        create?: Record<string, never>;
+      };
+    };
+  };
 };
 
 /** features and functionality provided by an mcp server _(since 2024-11-05)_ */
@@ -88,32 +132,19 @@ export type ServerCapabilities = {
     /** whether server sends notifications when tool list changes */
     listChanged?: boolean;
   };
-};
-
-/** schema definition for primitive value types without nesting _(since 2025-06-18)_ */
-export type PrimitiveSchemaDefinition = {
-  /** default value when no value is provided */
-  default?: JsonPrimitive;
-  /** human-readable description of this field */
-  description?: string;
-  /** allowed string values for enumeration types */
-  enum?: string[];
-  /** human-readable names corresponding to enum values */
-  enumNames?: string[];
-  /** specific format constraint for string types */
-  format?: 'date' | 'date-time' | 'email' | 'uri';
-  /** maximum allowed length for string types */
-  maxLength?: number;
-  /** maximum allowed value for numeric types */
-  maximum?: number;
-  /** minimum required length for string types */
-  minLength?: number;
-  /** minimum allowed value for numeric types */
-  minimum?: number;
-  /** human-readable display name */
-  title?: string;
-  /** primitive data type of this field */
-  type: 'string' | 'number' | 'integer' | 'boolean';
+  /** support for task-augmented requests */
+  tasks?: {
+    /** support for tasks/list */
+    list?: JsonifibleObject;
+    /** support for tasks/cancel */
+    cancel?: JsonifibleObject;
+    /** per-request task augmentation support */
+    requests?: {
+      tools?: {
+        call?: JsonifibleObject;
+      };
+    };
+  };
 };
 
 /** error types that can occur during mcp operations _(custom extension)_ */

@@ -21,7 +21,8 @@ import {
 } from '@coremcp/protocol';
 
 // Type-safe MCP message handling
-const validator = await getVersionedValidators('2025-06-18');
+// Also supports older versions: 2024-11-05, 2025-03-26, 2025-06-18
+const validator = await getVersionedValidators('2025-11-25');
 const validatedMessage = validator.validateCallToolRequest(request);
 ```
 
@@ -84,8 +85,8 @@ import {
 // Validate incoming JSON-RPC messages
 const message = validateJsonRpcMessage(rawJsonData);
 
-// Get protocol-specific validators
-const validators = await getVersionedValidators('2025-06-18');
+// Get protocol-specific validators (also supports 2024-11-05, 2025-03-26, 2025-06-18)
+const validators = await getVersionedValidators('2025-11-25');
 const toolRequest = validators.validateCallToolRequest(message);
 ```
 
@@ -97,7 +98,8 @@ import {
   SUPPORTED_PROTOCOL_VERSIONS,
 } from '@coremcp/protocol';
 
-const clientVersion = '2025-06-18';
+// Supported versions: 2024-11-05, 2025-03-26, 2025-06-18, 2025-11-25
+const clientVersion = '2025-11-25';
 const negotiated = negotiateProtocolVersion(
   clientVersion,
   SUPPORTED_PROTOCOL_VERSIONS,
@@ -160,6 +162,7 @@ try {
 | 2024-11-05 | ✅     | Initial MCP specification                |
 | 2025-03-26 | ✅     | Enhanced capabilities and error handling |
 | 2025-06-18 | ✅     | Latest with improved streaming support   |
+| 2025-11-25 | ✅     | Tasks, richer metadata, Streamable HTTP  |
 
 The package automatically selects the appropriate schema and validators based on the negotiated protocol version.
 
