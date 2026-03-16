@@ -358,28 +358,13 @@ export class HttpMcpConnector extends McpConnector {
       return;
     }
 
-    // handle non-authentication HTTP errors
-    const body = await this.#getErrorBody(response);
+    // handle non-authentication HTTP errors by throwing so the error
+    // propagates to the caller and the request promise is properly rejected
+    const body = await response.text();
 
-    this.info.log?.('error', 'HTTP request failed', {
-      status: response.status,
-      message: response.statusText,
-      body,
-    });
-  }
-
-  /**
-   * extracts error body from response based on content type
-   * @param response
-   */
-  async #getErrorBody(response: Response): Promise<JsonifibleValue> {
-    const contentType = response.headers.get('Content-Type');
-
-    if (contentType?.includes('application/json')) {
-      return (await response.json()) as JsonifibleValue;
-    }
-
-    return response.text();
+    throw new Error(
+      `HTTP ${response.status} ${response.statusText}: ${JSON.stringify(body)}`,
+    );
   }
 
   /**

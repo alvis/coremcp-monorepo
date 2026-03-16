@@ -26,7 +26,12 @@ describe('error scenarios', () => {
 
     expect(response.status).toBe(400);
     expect(response.data).toMatchObject({
-      error: 'Bad Request',
+      jsonrpc: '2.0',
+      id: null,
+      error: {
+        code: -32700,
+        message: 'Parse error',
+      },
     });
 
     await server.cleanup();

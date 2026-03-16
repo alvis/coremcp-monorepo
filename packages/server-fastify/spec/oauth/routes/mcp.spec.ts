@@ -111,7 +111,7 @@ describe('fn:registerMcpRoutes', () => {
   });
 
   describe('POST /mcp', () => {
-    it('should return error when Accept header is missing', async () => {
+    it('should not return 406 when Accept header is missing per RFC 9110 §12.5.1', async () => {
       const response = await fastify.inject({
         method: 'POST',
         url: '/mcp',
@@ -127,9 +127,9 @@ describe('fn:registerMcpRoutes', () => {
         },
       });
 
-      expect(response.statusCode).toBe(HTTP_NOT_ACCEPTABLE);
-      expect(response.body).toContain('Not Acceptable');
-      expect(response.body).toContain('Client must accept application/json');
+      // a missing Accept header means the client accepts any media type,
+      // so the server must not reject the request with 406 Not Acceptable
+      expect(response.statusCode).not.toBe(HTTP_NOT_ACCEPTABLE);
     });
 
     it('should return error when Accept header does not include application/json', async () => {

@@ -4,7 +4,7 @@
  * token validation. Validates Bearer tokens against an external AS via introspection.
  */
 
-import { HTTP_UNAUTHORIZED } from '#constants/http';
+import { HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from '#constants/http';
 import {
   validateBearerToken,
   extractBearerToken,
@@ -41,9 +41,11 @@ function sendTokenError(
   statusCode: number,
   description: string,
 ): void {
-  void reply.code(statusCode).send({
-    error: 'invalid_token',
+  const error =
+    statusCode === HTTP_FORBIDDEN ? 'insufficient_scope' : 'invalid_token';
 
+  void reply.code(statusCode).send({
+    error,
     error_description: description,
   });
 }

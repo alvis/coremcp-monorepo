@@ -1,15 +1,16 @@
 import { createHash } from 'node:crypto';
 
+import { MCP_ERROR_CODES } from '@coremcp/protocol';
 import { ServerTransport, start, stop } from '@coremcp/server/transport';
 import formbody from '@fastify/formbody';
-import fastify from 'fastify';
+import fastify, { type FastifyError } from 'fastify';
 
 import {
   DEFAULT_HOST,
   DEFAULT_HTTP_PORT,
   DEFAULT_INTROSPECTION_CACHE_TTL,
 } from '#constants/defaults';
-import { HTTP_UNAUTHORIZED } from '#constants/http';
+import { HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED } from '#constants/http';
 import { setupCORS } from '#cors';
 import { HTTPError } from '#errors';
 import {
@@ -411,7 +412,23 @@ export class HTTPTransport extends ServerTransport {
     // register MCP routes with the configured auth resolver
     this.#fastify.register(registerMcpRoutes(this.#server, resolveUserId));
 
-    // setup error handling
+    // setup error handling - intercept Fastify JSON parse errors and return
+    // a proper JSON-RPC parse error (-32700) instead of Fastify's default format
+    this.#fastify.setErrorHandler(async (error: FastifyError, _request, reply) => {
+      if (error.code === 'FST_ERR_CTP_INVALID_JSON_BODY') {
+        return reply.code(HTTP_BAD_REQUEST).send({
+          jsonrpc: '2.0',
+          id: null,
+          error: {
+            code: MCP_ERROR_CODES.PARSE_ERROR,
+            message: 'Parse error',
+          },
+        });
+      }
+
+      throw error;
+    });
+
     setupNotFoundHandler(this.#fastify);
   }
 }

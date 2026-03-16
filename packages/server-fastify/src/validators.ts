@@ -5,11 +5,13 @@ import {
 
 import {
   HTTP_BAD_REQUEST,
+  HTTP_FORBIDDEN,
   HTTP_NOT_ACCEPTABLE,
   HTTP_UNSUPPORTED_MEDIA_TYPE,
 } from '#constants/http';
 
 import { HTTPError } from '#errors';
+import { inferBaseUrlFromRequest } from '#request-context';
 
 import type { FastifyRequest } from 'fastify';
 
@@ -72,7 +74,14 @@ export function validateAcceptHeader(
   accepts: string[],
 ): void {
   const accept = request.headers.accept;
-  const hasValidAccept = accepts.some((type) => accept?.includes(type));
+
+  // per RFC 9110 §12.5.1, a missing Accept header means the client accepts
+  // any media type; a wildcard */* similarly accepts everything
+  if (!accept || accept.includes('*/*')) {
+    return;
+  }
+
+  const hasValidAccept = accepts.some((type) => accept.includes(type));
 
   if (!hasValidAccept) {
     throw new HTTPError({
@@ -83,6 +92,30 @@ export function validateAcceptHeader(
         error: {
           code: MCP_ERROR_CODES.TOOL_ERROR,
           message: `Not Acceptable: Client must accept ${accepts.join(' or ')}`,
+        },
+      },
+    });
+  }
+}
+
+/**
+ * validates the origin header against the expected base url
+ * @param request the fastify request object
+ */
+export function validateOrigin(request: FastifyRequest): void {
+  const origin = request.headers.origin;
+  if (!origin) return; // no Origin = not a browser CORS request
+
+  const expectedOrigin = inferBaseUrlFromRequest(request);
+  if (origin !== expectedOrigin) {
+    throw new HTTPError({
+      code: HTTP_FORBIDDEN,
+      body: {
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: MCP_ERROR_CODES.TOOL_ERROR,
+          message: 'Forbidden: invalid Origin header',
         },
       },
     });
