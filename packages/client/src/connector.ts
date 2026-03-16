@@ -29,9 +29,13 @@ import { RequestManager } from '#request-manager';
 
 import type { Log } from '@coremcp/core';
 import type {
+  CancelTaskResult,
   CallToolResult,
   CompleteResult,
+  CreateTaskResult,
+  GetTaskPayloadResult,
   GetPromptResult,
+  GetTaskResult,
   Implementation,
   InitializeRequest,
   InitializeResult,
@@ -39,6 +43,7 @@ import type {
   JsonRpcMessage,
   JsonRpcNotificationData,
   JsonRpcRequestEnvelope,
+  ListTasksResult,
   McpLogLevel,
   Prompt,
   PromptReference,
@@ -47,6 +52,7 @@ import type {
   ResourceTemplate,
   ResourceTemplateReference,
   ServerCapabilities,
+  TaskMetadata,
   Tool,
 } from '@coremcp/protocol';
 
@@ -379,8 +385,56 @@ export abstract class McpConnector {
   public async callTool(
     name: string,
     args?: JsonifibleObject,
-  ): Promise<CallToolResult> {
-    return callTool(this.sendRequest.bind(this), name, args);
+    task?: TaskMetadata,
+  ): Promise<CallToolResult | CreateTaskResult> {
+    return callTool(this.sendRequest.bind(this), name, args, task);
+  }
+
+  /**
+   * retrieves the current state of a task
+   * @param taskId unique identifier for the task
+   * @returns task state reported by the server
+   */
+  public async getTask(taskId: string): Promise<GetTaskResult> {
+    return this.sendRequest<GetTaskResult>({
+      method: 'tasks/get',
+      params: { taskId },
+    });
+  }
+
+  /**
+   * retrieves the final payload of a completed task
+   * @param taskId unique identifier for the task
+   * @returns task payload reported by the server
+   */
+  public async getTaskResult(taskId: string): Promise<GetTaskPayloadResult> {
+    return this.sendRequest<GetTaskPayloadResult>({
+      method: 'tasks/result',
+      params: { taskId },
+    });
+  }
+
+  /**
+   * lists tasks available on this server
+   * @returns paginated task list
+   */
+  public async listTasks(): Promise<ListTasksResult> {
+    return this.sendRequest<ListTasksResult>({
+      method: 'tasks/list',
+      params: undefined,
+    });
+  }
+
+  /**
+   * cancels a task on this server
+   * @param taskId unique identifier for the task to cancel
+   * @returns updated task state
+   */
+  public async cancelTask(taskId: string): Promise<CancelTaskResult> {
+    return this.sendRequest<CancelTaskResult>({
+      method: 'tasks/cancel',
+      params: { taskId },
+    });
   }
 
   /**

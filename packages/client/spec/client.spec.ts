@@ -590,6 +590,76 @@ describe('McpClient', () => {
       });
     });
 
+    it('should invoke onElicitationComplete callback for elicitation completion notification', async () => {
+      const onElicitationComplete = vi.fn();
+      let capturedOnNotification:
+        | ((notification: any) => Promise<void>)
+        | undefined;
+
+      const clientWithHook = new McpClient({
+        name: testClientInfo.name,
+        version: testClientInfo.version,
+        onElicitationComplete,
+      });
+
+      await clientWithHook.connect(
+        createConnectorWithNotificationCapture((fn) => {
+          capturedOnNotification = fn;
+        }),
+      );
+
+      await capturedOnNotification!({
+        method: 'notifications/elicitation/complete',
+        params: { elicitationId: 'elicitation-123' },
+      });
+
+      expect(onElicitationComplete).toHaveBeenCalledWith({
+        connector: mockServer,
+        elicitationId: 'elicitation-123',
+      });
+    });
+
+    it('should invoke onTaskStatus callback for task status notification', async () => {
+      const onTaskStatus = vi.fn();
+      let capturedOnNotification:
+        | ((notification: any) => Promise<void>)
+        | undefined;
+
+      const clientWithHook = new McpClient({
+        name: testClientInfo.name,
+        version: testClientInfo.version,
+        onTaskStatus,
+      });
+
+      await clientWithHook.connect(
+        createConnectorWithNotificationCapture((fn) => {
+          capturedOnNotification = fn;
+        }),
+      );
+
+      await capturedOnNotification!({
+        method: 'notifications/tasks/status',
+        params: {
+          taskId: 'task-123',
+          status: 'working',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+          ttl: null,
+        },
+      });
+
+      expect(onTaskStatus).toHaveBeenCalledWith({
+        connector: mockServer,
+        task: {
+          taskId: 'task-123',
+          status: 'working',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+          ttl: null,
+        },
+      });
+    });
+
     it('should not throw error when notification hooks are not configured', async () => {
       let capturedOnNotification:
         | ((notification: any) => Promise<void>)
@@ -661,7 +731,7 @@ describe('McpClient', () => {
         data: 'Error message',
         logger: 'test-logger',
       });
-      expect(log).toHaveBeenCalledWith('debug', 'Error message', {
+      expect(log).toHaveBeenCalledWith('error', 'Error message', {
         logger: 'test-logger',
       });
     });
@@ -873,6 +943,41 @@ describe('McpClient', () => {
       });
     });
 
+    it('should call tool on specific server with task metadata', async () => {
+      mockServer.callTool = vi.fn().mockResolvedValue({
+        task: {
+          taskId: 'task-123',
+          status: 'working',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+          ttl: 30000,
+        },
+      });
+      await client.connect(testCreateConnector);
+
+      const result = await client.callTool(
+        testServerName,
+        'long-tool',
+        { arg1: 'value1' },
+        { ttl: 30000 },
+      );
+
+      expect(mockServer.callTool).toHaveBeenCalledWith(
+        'long-tool',
+        { arg1: 'value1' },
+        { ttl: 30000 },
+      );
+      expect(result).toEqual({
+        task: {
+          taskId: 'task-123',
+          status: 'working',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+          ttl: 30000,
+        },
+      });
+    });
+
     it('should list tools from all servers', async () => {
       mockServer.listTools = vi
         .fn()
@@ -912,6 +1017,96 @@ describe('McpClient', () => {
       expect(tool).toEqual({
         name: 'target-tool',
         description: 'Target',
+      });
+    });
+  });
+
+  describe('task methods', () => {
+    it('should get task state from a specific server', async () => {
+      mockServer.getTask = vi.fn().mockResolvedValue({
+        taskId: 'task-123',
+        status: 'working',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+        ttl: null,
+      });
+      await client.connect(testCreateConnector);
+
+      const result = await client.getTask(testServerName, 'task-123');
+
+      expect(mockServer.getTask).toHaveBeenCalledWith('task-123');
+      expect(result).toEqual({
+        taskId: 'task-123',
+        status: 'working',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+        ttl: null,
+      });
+    });
+
+    it('should get task result payload from a specific server', async () => {
+      mockServer.getTaskResult = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'done' }],
+      });
+      await client.connect(testCreateConnector);
+
+      const result = await client.getTaskResult(testServerName, 'task-123');
+
+      expect(mockServer.getTaskResult).toHaveBeenCalledWith('task-123');
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'done' }],
+      });
+    });
+
+    it('should list tasks from a specific server', async () => {
+      mockServer.listTasks = vi.fn().mockResolvedValue({
+        tasks: [
+          {
+            taskId: 'task-123',
+            status: 'working',
+            createdAt: '2026-03-08T00:00:00.000Z',
+            lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+            ttl: null,
+          },
+        ],
+      });
+      await client.connect(testCreateConnector);
+
+      const result = await client.listTasks(testServerName);
+
+      expect(mockServer.listTasks).toHaveBeenCalledWith();
+      expect(result).toEqual({
+        tasks: [
+          {
+            taskId: 'task-123',
+            status: 'working',
+            createdAt: '2026-03-08T00:00:00.000Z',
+            lastUpdatedAt: '2026-03-08T00:00:00.000Z',
+            ttl: null,
+          },
+        ],
+      });
+    });
+
+    it('should cancel a task on a specific server', async () => {
+      mockServer.cancelTask = vi.fn().mockResolvedValue({
+        taskId: 'task-123',
+        status: 'cancelled',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        lastUpdatedAt: '2026-03-08T00:01:00.000Z',
+        ttl: null,
+      });
+      await client.connect(testCreateConnector);
+
+      const result = await client.cancelTask(testServerName, 'task-123');
+
+      expect(mockServer.cancelTask).toHaveBeenCalledWith('task-123');
+      expect(result).toEqual({
+        taskId: 'task-123',
+        status: 'cancelled',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        lastUpdatedAt: '2026-03-08T00:01:00.000Z',
+        ttl: null,
       });
     });
   });

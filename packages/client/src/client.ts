@@ -11,21 +11,27 @@ import { ToolManager } from '#tool';
 
 import type { Log, SessionStore } from '@coremcp/core';
 import type {
+  CancelTaskResult,
   CallToolResult,
   ClientCapabilities,
   CompleteResult,
+  CreateTaskResult,
   CreateMessageRequest,
   CreateMessageResult,
   ElicitRequest,
   ElicitResult,
+  GetTaskPayloadResult,
+  GetTaskResult,
   Implementation,
   InitializeResult,
   JsonifibleObject,
+  ListTasksResult,
   McpLogLevel,
   ReadResourceResult,
   Resource,
   ResourceTemplate,
   Root,
+  TaskMetadata,
   Tool,
 } from '@coremcp/protocol';
 
@@ -37,10 +43,12 @@ import type { ClientResource, ClientResourceTemplate } from '#resource';
 import type { ClientTool } from '#tool';
 import type {
   OnCancelled,
+  OnElicitationComplete,
   OnListChange,
   OnLogMessage,
   OnProgress,
   OnResourceChange,
+  OnTaskStatus,
 } from '#types';
 
 export type { CreateConnector } from '#connection';
@@ -67,8 +75,12 @@ export interface McpClientOptions {
   onProgress?: OnProgress;
   /** callback for cancelled notifications */
   onCancelled?: OnCancelled;
+  /** callback for out-of-band elicitation completion notifications */
+  onElicitationComplete?: OnElicitationComplete;
   /** callback for log message notifications */
   onLogMessage?: OnLogMessage;
+  /** callback for task status notifications */
+  onTaskStatus?: OnTaskStatus;
   /** optional logger for debugging */
   log?: Log;
   /** optional session store for persistence */
@@ -100,9 +112,17 @@ export class McpClient {
     };
     const roots = options.roots ?? [];
     const capabilities: ClientCapabilities = {
-      elicitation: options.onElicitation ? {} : undefined,
+      elicitation: options.onElicitation ? { form: {}, url: {} } : undefined,
       roots: { listChanged: true },
-      sampling: options.onSampling ? {} : undefined,
+      sampling: options.onSampling ? { context: {}, tools: {} } : undefined,
+      tasks: {
+        cancel: {},
+        list: {},
+        requests: {
+          elicitation: options.onElicitation ? { create: {} } : undefined,
+          sampling: options.onSampling ? { createMessage: {} } : undefined,
+        },
+      },
     };
     this.#onElicitation = options.onElicitation;
     this.#onSampling = options.onSampling;
@@ -120,7 +140,9 @@ export class McpClient {
       onResourceChange: options.onResourceChange,
       onProgress: options.onProgress,
       onCancelled: options.onCancelled,
+      onElicitationComplete: options.onElicitationComplete,
       onLogMessage: options.onLogMessage,
+      onTaskStatus: options.onTaskStatus,
       log: options.log,
       cacheManager: this.#cacheManager,
       refreshList: this.#refreshList.bind(this),
@@ -357,8 +379,74 @@ export class McpClient {
     server: string,
     toolName: string,
     args?: JsonifibleObject,
-  ): Promise<CallToolResult> {
-    return this.#toolManager.callTool(server, toolName, args);
+    task?: TaskMetadata,
+  ): Promise<CallToolResult | CreateTaskResult> {
+    return this.#toolManager.callTool(server, toolName, args, task);
+  }
+
+  /**
+   * retrieves the current state of a task from a specific server
+   * @param server - the name of the server hosting the task
+   * @param taskId - the task identifier to retrieve
+   * @returns the current task state
+   */
+  public async getTask(server: string, taskId: string): Promise<GetTaskResult> {
+    const connector = this.#connectionManager.connectors.get(server);
+    if (!connector) {
+      throw new Error(`Server ${server} not found`);
+    }
+
+    return connector.getTask(taskId);
+  }
+
+  /**
+   * retrieves the final payload for a completed task from a specific server
+   * @param server - the name of the server hosting the task
+   * @param taskId - the completed task identifier
+   * @returns the task payload
+   */
+  public async getTaskResult(
+    server: string,
+    taskId: string,
+  ): Promise<GetTaskPayloadResult> {
+    const connector = this.#connectionManager.connectors.get(server);
+    if (!connector) {
+      throw new Error(`Server ${server} not found`);
+    }
+
+    return connector.getTaskResult(taskId);
+  }
+
+  /**
+   * lists tasks from a specific server
+   * @param server - the name of the server to query
+   * @returns paginated task list
+   */
+  public async listTasks(server: string): Promise<ListTasksResult> {
+    const connector = this.#connectionManager.connectors.get(server);
+    if (!connector) {
+      throw new Error(`Server ${server} not found`);
+    }
+
+    return connector.listTasks();
+  }
+
+  /**
+   * cancels a task on a specific server
+   * @param server - the name of the server hosting the task
+   * @param taskId - the task identifier to cancel
+   * @returns updated task state after cancellation
+   */
+  public async cancelTask(
+    server: string,
+    taskId: string,
+  ): Promise<CancelTaskResult> {
+    const connector = this.#connectionManager.connectors.get(server);
+    if (!connector) {
+      throw new Error(`Server ${server} not found`);
+    }
+
+    return connector.cancelTask(taskId);
   }
 
   /**
@@ -470,7 +558,7 @@ export class McpClient {
    */
   public async handleElicitationRequest(
     params: ElicitRequest['params'],
-  ): Promise<ElicitResult> {
+  ): Promise<ElicitResult | CreateTaskResult> {
     if (!this.#onElicitation) {
       throw new Error('Elicitation callback not configured');
     }
@@ -485,7 +573,7 @@ export class McpClient {
    */
   public async handleSamplingRequest(
     params: CreateMessageRequest['params'],
-  ): Promise<CreateMessageResult> {
+  ): Promise<CreateMessageResult | CreateTaskResult> {
     if (!this.#onSampling) {
       throw new Error('Sampling callback not configured');
     }

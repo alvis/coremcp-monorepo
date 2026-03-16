@@ -190,11 +190,23 @@ export class StdioConnector extends McpConnector {
     timeoutMs: number,
   ): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      const timer = setTimeout(() => resolve(false), timeoutMs);
-      serverProcess.once('close', () => {
+      if (serverProcess.exitCode !== null) {
+        resolve(true);
+
+        return;
+      }
+
+      const onClose = (): void => {
         clearTimeout(timer);
         resolve(true);
-      });
+      };
+
+      const timer = setTimeout(() => {
+        serverProcess.removeListener('close', onClose);
+        resolve(false);
+      }, timeoutMs);
+
+      serverProcess.once('close', onClose);
     });
   }
 
@@ -320,6 +332,12 @@ export class StdioConnector extends McpConnector {
 
     // stage 3: force kill with SIGKILL
     this.#sendSignal(serverProcess, 'SIGKILL');
+
+    // destroy remaining stdio streams to release pipe handles so the
+    // parent's event loop is not kept alive by orphaned pipes
+    serverProcess.stdout?.destroy();
+    serverProcess.stderr?.destroy();
+
     this[status] = 'disconnected';
   }
 }

@@ -1,4 +1,5 @@
 export { McpConnector } from '#connector';
+export { ToolError } from '#connector/tools';
 export { PromptManager } from '#prompt';
 export { ResourceManager } from '#resource';
 export { ToolManager } from '#tool';
@@ -24,8 +25,12 @@ export type {
   OnProgressParams,
   OnCancelled,
   OnCancelledParams,
+  OnElicitationComplete,
+  OnElicitationCompleteParams,
   OnLogMessage,
   OnLogMessageParams,
+  OnTaskStatus,
+  OnTaskStatusParams,
 } from '#types';
 export type { PendingRequest } from '#request-manager';
 export type { MessageHandlers, MessageHandlerContext } from '#message-handlers';

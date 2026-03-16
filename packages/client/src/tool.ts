@@ -1,4 +1,10 @@
-import type { CallToolResult, JsonifibleObject, Tool } from '@coremcp/protocol';
+import type {
+  CallToolResult,
+  CreateTaskResult,
+  JsonifibleObject,
+  TaskMetadata,
+  Tool,
+} from '@coremcp/protocol';
 
 import type { CacheManager } from '#cache';
 import type { ConnectionManager } from '#connection';
@@ -41,11 +47,16 @@ export class ToolManager {
     serverName: string,
     toolName: string,
     args?: JsonifibleObject,
-  ): Promise<CallToolResult> {
+    task?: TaskMetadata,
+  ): Promise<CallToolResult | CreateTaskResult> {
     const server = this.#connectionManager.connectors.get(serverName);
 
     if (!server) {
       throw new Error(`Server ${serverName} not found`);
+    }
+
+    if (task) {
+      return server.callTool(toolName, args, task);
     }
 
     return server.callTool(toolName, args);

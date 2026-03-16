@@ -1,12 +1,15 @@
 import { fetchAllPaginated } from '#connector/pagination';
 
 import type {
+  CreateTaskResult,
   CallToolResult,
   JsonRpcRequestEnvelope,
   JsonifibleObject,
   ListToolsResult,
   McpLogLevel,
   PingRequest,
+  TaskMetadata,
+  TextContent,
   Tool,
 } from '@coremcp/protocol';
 
@@ -35,16 +38,56 @@ export async function listTools(sendRequest: SendRequest): Promise<Tool[]> {
  * @param name name of the tool to invoke
  * @param args optional arguments to pass to the tool
  * @returns tool execution result
+ * @throws {ToolError} when the server returns a result with isError set to true
  */
 export async function callTool(
   sendRequest: SendRequest,
   name: string,
   args?: JsonifibleObject,
-): Promise<CallToolResult> {
-  return sendRequest<CallToolResult>({
+  task?: TaskMetadata,
+): Promise<CallToolResult | CreateTaskResult> {
+  const result = await sendRequest<CallToolResult | CreateTaskResult>({
     method: 'tools/call',
-    params: { name, arguments: args },
+    params: task ? { name, arguments: args, task } : { name, arguments: args },
   });
+
+  if ('isError' in result && result.isError) {
+    const message = extractErrorMessage(result as CallToolResult, name);
+    throw new ToolError(message, result as CallToolResult);
+  }
+
+  return result;
+}
+
+/**
+ * extracts a human-readable error message from a failed tool result
+ * @param result the call tool result containing error content
+ * @param name the tool name that was called
+ * @returns error message string
+ */
+function extractErrorMessage(result: CallToolResult, name: string): string {
+  const textBlock = result.content?.find(
+    (block): block is TextContent => block.type === 'text',
+  );
+
+  return textBlock?.text ?? `Tool call failed: ${name}`;
+}
+
+/** error thrown when a tool call returns a result with isError set to true */
+export class ToolError extends Error {
+  /** the original tool result from the server */
+  public readonly result: CallToolResult;
+
+  /**
+   * creates a new tool error
+   * @param message error message extracted from the tool result
+   * @param result the original call tool result from the server
+   */
+  constructor(message: string, result: CallToolResult) {
+    super(message);
+    this.name = 'ToolError';
+    this.result = result;
+  }
 }
 
 /**
