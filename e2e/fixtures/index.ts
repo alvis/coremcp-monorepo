@@ -1,37 +1,75 @@
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 
 import type { ChildProcess } from 'node:child_process';
+import type { AddressInfo } from 'node:net';
 
-// RE-EXPORTS //
-
-export {
-  runInspectorList,
-  runInspectorToolCall,
-  runInspectorResourceRead,
-  runInspectorPromptGet,
-} from './inspector';
+// RE-EXPORTS — server-spawner //
 
 export {
-  HTTP_TEST_PORT,
   spawnHttpTestServer,
+  spawnAuthHttpTestServer,
   getStdioServerConfig,
   waitForHttpTestServer,
   killTestServer,
 } from './server-spawner';
 
-export type {
-  InspectorTransport,
-  InspectorListMethod,
-  InspectorOptions,
-  InspectorResult,
-} from './inspector';
-
 export type { WaitForServerOptions, StdioServerConfig } from './server-spawner';
+
+// RE-EXPORTS — transport-helpers //
+
+export {
+  createServerHttpClientContext,
+  createServerStdioClientContext,
+  createClientHttpContext,
+  createClientStdioContext,
+} from './transport-helpers';
+
+export type {
+  ServerHttpClientContext,
+  ServerStdioClientContext,
+  ServerHttpClientContextOptions,
+  ServerStdioClientContextOptions,
+  ClientHttpContext,
+  ClientStdioContext,
+  ClientContextOptions,
+} from './transport-helpers';
+
+// RE-EXPORTS — undici-helpers //
+
+export {
+  createMockAgent,
+  interceptWithNetworkError,
+  interceptWithTimeout,
+  interceptWithAbortMidStream,
+  createInterceptedFetch,
+} from './undici-helpers';
+
+// RE-EXPORTS — raw-http-client //
+
+export { createRawHttpSession } from './raw-http-client';
+
+export type { RawHttpResponse, RawHttpSession } from './raw-http-client';
+
+// RE-EXPORTS — raw-stdio-client //
+
+export { createRawStdioSession } from './raw-stdio-client';
+
+export type { RawStdioResponse, RawStdioSession } from './raw-stdio-client';
+
+// RE-EXPORTS — auth-server //
+
+export {
+  AUTH_SERVER_PORT,
+  startAuthServer,
+  stopAuthServer,
+  validateAccessToken,
+  tokenHasScope,
+} from './auth-server';
 
 // CONSTANTS //
 
 export const CLIENT_INFO = { name: 'e2e-test-client', version: '1.0.0' };
-export const HTTP_PORT = 3100;
 
 // FUNCTIONS //
 
@@ -68,17 +106,38 @@ export async function waitForServer(
 
 /**
  * Spawn server-everything with streamable HTTP transport
- * @returns spawned HTTP server process
+ * @returns spawned HTTP server process and the dynamically allocated port
  */
-export function spawnHttpServer(): ChildProcess {
-  return spawn(
+export async function spawnHttpServer(): Promise<{
+  process: ChildProcess;
+  port: number;
+}> {
+  const port = await getAvailablePort();
+  const serverProcess = spawn(
     'npx',
     ['-y', '@modelcontextprotocol/server-everything', 'streamableHttp'],
     {
       stdio: 'pipe',
-      env: { ...process.env, PORT: String(HTTP_PORT) },
+      env: { ...process.env, PORT: String(port) },
     },
   );
+
+  return { process: serverProcess, port };
+}
+
+/**
+ * Find a free port by binding to port 0 and reading the assigned port
+ * @returns a port number that was available at the time of the check
+ */
+async function getAvailablePort(): Promise<number> {
+  const server = createServer();
+
+  return new Promise((resolve) => {
+    server.listen(0, () => {
+      const { port } = server.address() as AddressInfo;
+      server.close(() => resolve(port));
+    });
+  });
 }
 
 /**
