@@ -40,7 +40,7 @@
     "node > 22"
   ],
   "devDependencies": {
-    "@modelcontextprotocol/server-everything": "2025.11.25",
+    "@modelcontextprotocol/server-everything": "*",
     "@coremcp/client": "workspace:*",
     "@coremcp/client-http": "workspace:*",
     "@coremcp/client-stdio": "workspace:*",
@@ -48,7 +48,8 @@
     "@coremcp/protocol": "workspace:*",
     "@coremcp/server": "workspace:*",
     "@coremcp/server-fastify": "workspace:*",
-    "@coremcp/server-stdio": "workspace:*"
+    "@coremcp/server-stdio": "workspace:*",
+    "undici": "catalog:test"
   },
   "engines": {
     "node": ">20"

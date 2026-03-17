@@ -1,17 +1,29 @@
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { resolve } from 'node:path';
 
 import type { ChildProcess } from 'node:child_process';
+import type { AddressInfo } from 'node:net';
 
 // MODULE PATH RESOLUTION //
 
 /** absolute path to the e2e directory */
 const E2E_ROOT = resolve(import.meta.dirname, '..');
 
-// CONSTANTS //
+/**
+ * absolute path to the tsx loader module resolved via npx
+ *
+ * In pnpm monorepos tsx may not be directly resolvable as a bare specifier
+ * because it is a transitive peer dependency. This resolves the actual loader
+ * path once at module load time so it can be passed to `--import` when
+ * spawning child processes.
+ */
+const TSX_LOADER_PATH = execSync('npx tsx -e \'console.log(require.resolve("tsx"))\'', {
+  encoding: 'utf8',
+  cwd: E2E_ROOT,
+}).trim();
 
-/** default HTTP test server port */
-export const HTTP_TEST_PORT = 3200;
+// CONSTANTS //
 
 /** timeout for waiting for HTTP server to be ready (60 seconds) */
 const DEFAULT_WAIT_TIMEOUT = 60_000;
@@ -43,18 +55,37 @@ export interface StdioServerConfig {
 // FUNCTIONS //
 
 /**
- * spawns HTTP test server as a child process
- * @param port port number for the HTTP server (defaults to HTTP_TEST_PORT)
- * @returns child process handle for the spawned server
+ * finds a free port by binding to port 0 and reading the assigned port
+ * @returns a port number that was available at the time of the check
  */
-export function spawnHttpTestServer(port?: number): ChildProcess {
-  const serverPort = port ?? HTTP_TEST_PORT;
+async function getAvailablePort(): Promise<number> {
+  const server = createServer();
+
+  return new Promise((resolve) => {
+    server.listen(0, () => {
+      const { port } = server.address() as AddressInfo;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * spawns HTTP test server as a child process on a dynamically allocated port
+ * @returns child process handle and the allocated port number
+ */
+export async function spawnHttpTestServer(): Promise<{
+  process: ChildProcess;
+  port: number;
+}> {
+  const port = await getAvailablePort();
   const serverPath = resolve(E2E_ROOT, 'bin', 'test-server-http.ts');
 
-  return spawn('npx', ['tsx', serverPath], {
+  const serverProcess = spawn(process.execPath, ['--import', TSX_LOADER_PATH, serverPath], {
     stdio: ['pipe', 'pipe', 'inherit'], // inherit stderr to surface errors
-    env: { ...process.env, PORT: String(serverPort) },
+    env: { ...process.env, PORT: String(port) },
   });
+
+  return { process: serverProcess, port };
 }
 
 /**
@@ -68,8 +99,8 @@ export function getStdioServerConfig(): StdioServerConfig {
   const serverPath = resolve(E2E_ROOT, 'bin', 'test-server-stdio.ts');
 
   return {
-    command: 'npx',
-    args: ['tsx', serverPath],
+    command: process.execPath,
+    args: ['--import', TSX_LOADER_PATH, serverPath],
   };
 }
 
@@ -96,9 +127,10 @@ export async function waitForHttpTestServer(
       const response = await fetch(url, { method: 'GET' });
 
       // 400 is valid - streamableHttp returns 400 when no session ID provided
+      // 401 is valid - auth-protected server returns 401 for unauthenticated requests
       // 404 is valid - health endpoint might not exist but server is running
-      // This proves the server is running and accepting connections
-      if (response.ok || response.status === 400 || response.status === 404) {
+      // any of these prove the server is running and accepting connections
+      if (response.ok || response.status === 400 || response.status === 401 || response.status === 404) {
         return;
       }
     } catch {
@@ -141,4 +173,39 @@ export async function killTestServer(process: ChildProcess): Promise<void> {
       resolve();
     }, GRACEFUL_SHUTDOWN_TIMEOUT);
   });
+}
+
+/**
+ * spawns an auth-protected HTTP test server as a child process on a dynamically allocated port
+ *
+ * uses the same test server binary but with external auth mode enabled.
+ * configures AUTH_MODE and AUTH_ISSUER env vars so the server validates
+ * tokens via the mock OAuth authorization server's introspection endpoint.
+ *
+ * the mock auth server must be started separately via auth-server.ts
+ * before spawning this server.
+ * @param options.authServerPort port of the running auth server for issuer URL
+ * @returns child process handle and the allocated port number
+ */
+export async function spawnAuthHttpTestServer(options: {
+  authServerPort: number;
+}): Promise<{
+  process: ChildProcess;
+  port: number;
+}> {
+  const port = await getAvailablePort();
+  const serverPath = resolve(E2E_ROOT, 'bin', 'test-server-http.ts');
+  const authIssuer = `http://localhost:${options.authServerPort}`;
+
+  const serverProcess = spawn(process.execPath, ['--import', TSX_LOADER_PATH, serverPath], {
+    stdio: ['pipe', 'pipe', 'inherit'],
+    env: {
+      ...process.env,
+      PORT: String(port),
+      AUTH_MODE: 'external',
+      AUTH_ISSUER: authIssuer,
+    },
+  });
+
+  return { process: serverProcess, port };
 }
