@@ -1,0 +1,66 @@
+<svg width="1600" height="960" viewBox="0 0 1600 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="coremcp-amber" x1="270" y1="252" x2="446" y2="428" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFBE62"/>
+      <stop offset="1" stop-color="#FE9A22"/>
+    </linearGradient>
+    <linearGradient id="coremcp-blue" x1="1088" y1="144" x2="1266" y2="340" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5E8AB1"/>
+      <stop offset="1" stop-color="#406F97"/>
+    </linearGradient>
+    <filter id="coremcp-blur" x="0" y="0" width="1600" height="960" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="42"/>
+    </filter>
+  </defs>
+
+  <g opacity="0.5" filter="url(#coremcp-blur)">
+    <circle cx="248" cy="214" r="122" fill="#FE9A22"/>
+    <circle cx="1248" cy="156" r="116" fill="#5E8AB1"/>
+    <circle cx="1370" cy="754" r="142" fill="#406F97"/>
+  </g>
+
+  <g opacity="0.16" stroke="#406F97" stroke-width="2">
+    <circle cx="304" cy="356" r="210"/>
+    <circle cx="304" cy="356" r="288" stroke-dasharray="10 12"/>
+    <circle cx="1168" cy="642" r="194"/>
+    <circle cx="1168" cy="642" r="274" stroke-dasharray="10 12"/>
+  </g>
+
+  <g opacity="0.9">
+    <path d="M100 302H484C531.496 302 570 340.504 570 388V436C570 483.496 608.504 522 656 522H820C867.496 522 906 560.504 906 608V696C906 743.496 944.504 782 992 782H1510" stroke="#1C3355" stroke-width="16" stroke-linecap="round"/>
+    <path d="M98 520H366C413.496 520 452 481.496 452 434V270C452 222.504 490.504 184 538 184H900" stroke="#406F97" stroke-width="14" stroke-linecap="round"/>
+    <path d="M722 184H1146C1193.5 184 1232 222.504 1232 270V348C1232 395.496 1270.5 434 1318 434H1496" stroke="#1C3355" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <rect x="152" y="220" width="214" height="160" rx="30" fill="rgba(255,253,248,0.78)" stroke="#1C3355" stroke-width="8"/>
+    <rect x="190" y="260" width="138" height="18" rx="9" fill="#406F97" fill-opacity="0.3"/>
+    <rect x="190" y="300" width="98" height="18" rx="9" fill="#406F97" fill-opacity="0.22"/>
+    <rect x="190" y="338" width="118" height="18" rx="9" fill="#406F97" fill-opacity="0.16"/>
+  </g>
+
+  <g>
+    <rect x="1036" y="120" width="236" height="184" rx="34" fill="rgba(255,253,248,0.76)" stroke="#406F97" stroke-width="8"/>
+    <rect x="1082" y="166" width="78" height="78" rx="18" fill="url(#coremcp-blue)"/>
+    <rect x="1184" y="166" width="48" height="18" rx="9" fill="#406F97" fill-opacity="0.28"/>
+    <rect x="1184" y="200" width="42" height="18" rx="9" fill="#406F97" fill-opacity="0.18"/>
+    <rect x="1082" y="258" width="150" height="18" rx="9" fill="#406F97" fill-opacity="0.14"/>
+  </g>
+
+  <g>
+    <rect x="950" y="564" width="304" height="216" rx="38" fill="rgba(255,253,248,0.78)" stroke="#1C3355" stroke-width="8"/>
+    <rect x="996" y="610" width="212" height="24" rx="12" fill="#1C3355" fill-opacity="0.9"/>
+    <rect x="996" y="652" width="166" height="20" rx="10" fill="#406F97" fill-opacity="0.24"/>
+    <rect x="996" y="692" width="102" height="20" rx="10" fill="#406F97" fill-opacity="0.18"/>
+    <rect x="1144" y="676" width="64" height="64" rx="20" fill="url(#coremcp-amber)"/>
+  </g>
+
+  <g>
+    <rect x="428" y="482" width="196" height="196" rx="46" fill="rgba(255,253,248,0.72)" stroke="#1C3355" stroke-width="10"/>
+    <rect x="474" y="528" width="104" height="104" rx="30" fill="url(#coremcp-amber)"/>
+    <circle cx="526" cy="580" r="16" fill="#1C3355"/>
+    <circle cx="1120" cy="434" r="24" fill="url(#coremcp-blue)" stroke="#1C3355" stroke-width="8"/>
+    <circle cx="902" cy="184" r="20" fill="url(#coremcp-amber)" stroke="#1C3355" stroke-width="8"/>
+    <circle cx="452" cy="434" r="18" fill="#406F97" stroke="#1C3355" stroke-width="8"/>
+  </g>
+</svg>

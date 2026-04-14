@@ -19,11 +19,13 @@
   "scripts": {
     "build": "pnpm --recursive run build",
     "coverage": "run coverage",
-    "install": "presetter bootstrap --projects . --projects */*/",
+    "install": "presetter bootstrap --projects . --projects e2e --projects website --projects */*/",
     "lint": "run lint --",
     "prepare": "husky || true",
     "test": "run test --",
     "typecheck": "pnpm --recursive run typecheck",
+    "website:dev": "pnpm --filter coremcp-website dev",
+    "website:build": "pnpm --filter coremcp-website build",
     "watch": "run watch"
   },
   "lint-staged": {
